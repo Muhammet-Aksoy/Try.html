@@ -103,6 +103,58 @@
             opacity: 0.9;
         }
         
+        .sync-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+        }
+        
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .sync-indicator.online {
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        .sync-indicator.offline {
+            background: #e74c3c;
+        }
+        
+        .sync-indicator.syncing {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .variant-badge {
+            background: #e8f4fd;
+            color: #2c6fbb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        
         .app-controls {
             display: flex;
             gap: 15px;
@@ -840,8 +892,14 @@
                 </div>
             </div>
         </div>
-    </header>
-    
+        </header>
+
+    <!-- Senkronizasyon Durumu -->
+    <div class="sync-status" id="syncStatus">
+        <div class="sync-indicator offline" id="syncIndicator"></div>
+        <span id="syncText">Çevrimdışı</span>
+    </div>
+
     <div class="container">
         <!-- İstatistik Kartları -->
         <div class="stats-container">
@@ -1318,9 +1376,14 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="saleProduct"><i class="fas fa-box"></i> Ürün Seçin *</label>
-                        <select id="saleProduct" class="form-control" required>
-                            <option value="">Ürün seçin</option>
-                        </select>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="saleProduct" class="form-control" required style="flex: 1;">
+                                <option value="">Ürün seçin</option>
+                            </select>
+                            <button type="button" class="btn btn-outline" onclick="showBestSellersForCustomer()">
+                                <i class="fas fa-star"></i> Çok Satanlar
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="saleQuantity"><i class="fas fa-layer-group"></i> Miktar *</label>
@@ -1371,8 +1434,8 @@
         let editingMode = false;
         // Düzenlenen müşteri ID
         let editingMusteriId = null;
-        // Düzenlenen barkod
-        let editingBarcode = null;
+        // Düzenlenen ürün ID'si
+        let editingProductId = null;
         // Düzenlenen satış ID
         let editingSaleId = null;
         // Müşteriye satış eklemede kullanılacak müşteri ID
@@ -1385,6 +1448,13 @@
             satisGecmisiGuncelle();
             musteriTablosuGuncelle();
             handleClientLoad();
+            
+            // Senkronizasyon durumunu başlat
+            if (isOnline) {
+                updateSyncStatus('offline', 'Bağlanıyor...');
+            } else {
+                updateSyncStatus('offline', 'Çevrimdışı');
+            }
             
             // Tab menü olayları
             document.querySelectorAll('.tab').forEach(tab => {
@@ -1521,9 +1591,10 @@
             
             let productFound = false;
             
-            for (const [barkod, urun] of sortedProducts) {
+            for (const [productId, urun] of sortedProducts) {
                 // Stok sıfır ise özel class ekle
                 const stockZeroClass = urun.miktar === 0 ? 'stock-zero' : '';
+                const barkod = urun.barkod || productId; // Geriye uyumluluk için
                 
                 // Tablo satırı oluştur
                 const tr = document.createElement('tr');
@@ -1532,6 +1603,7 @@
                 tr.innerHTML = `
                     <td>${barkod}</td>
                     <td class="tooltip">${urun.ad}
+                        ${urun.marka ? `<br><small style="color: #888;">${urun.marka}</small>` : ''}
                         ${urun.aciklama ? `<span class="tooltiptext">${urun.aciklama}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>` : ''}
                     </td>
                     <td>${urun.marka || '-'}</td>
@@ -1539,13 +1611,13 @@
                     <td>${urun.alisFiyati ? urun.alisFiyati.toFixed(2) : '-'}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${barkod}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
+                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${productId}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
                                 <i class="fas fa-cash-register"></i>
                             </button>
-                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${barkod}')">
+                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${productId}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${barkod}')">
+                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${productId}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                             <button class="action-btn btn-info" title="Barkod Bas" onclick="barkodBas('${barkod}')">
@@ -1565,6 +1637,7 @@
                             ${urun.aciklama ? `<span class="tooltiptext">${urun.aciklama}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>` : ''}
                         </h3>
                         <p>${barkod}</p>
+                        ${urun.marka ? `<p style="font-size: 12px; color: #888;">${urun.marka}</p>` : ''}
                     </div>
                     <div class="product-body">
                         <div class="product-info">
@@ -1575,13 +1648,13 @@
                     </div>
                     <div class="product-footer">
                         <div class="action-buttons">
-                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${barkod}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
+                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${productId}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
                                 <i class="fas fa-cash-register"></i>
                             </button>
-                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${barkod}')">
+                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${productId}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${barkod}')">
+                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${productId}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                             <button class="action-btn btn-info" title="Barkod Bas" onclick="barkodBas('${barkod}')">
@@ -2146,20 +2219,36 @@
         }
 
         // Ürün düzenle
-        function urunDuzenle(barkod) {
-            const urun = stokListesi[barkod];
-            document.getElementById('barkod').value = barkod;
+        function urunDuzenle(productId) {
+            const urun = stokListesi[productId];
+            document.getElementById('barkod').value = urun.barkod;
             document.getElementById('urunAdi').value = urun.ad;
             document.getElementById('marka').value = urun.marka || '';
             document.getElementById('aciklama').value = urun.aciklama || '';
             document.getElementById('miktar').value = urun.miktar;
             document.getElementById('alisFiyati').value = urun.alisFiyati || '';
             
-            // Düzenlenen barkodu kaydet
-            editingBarcode = barkod;
+            // Düzenlenen ürün ID'sini kaydet
+            editingProductId = productId;
             
             // Sayfayı formun olduğu kısma kaydır
             document.getElementById('barkod').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Benzersiz ürün ID oluştur
+        function generateProductId() {
+            return 'urun_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+        }
+
+        // Aynı barkod ve isme sahip ürünleri kontrol et
+        function findSimilarProducts(barkod, ad) {
+            const similar = [];
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod && urun.ad === ad) {
+                    similar.push({ id, ...urun });
+                }
+            }
+            return similar;
         }
 
         // Ürün ekle / güncelle fonksiyonu
@@ -2177,59 +2266,80 @@
             }
 
             // Eğer yeni bir ürünse açıklamaya tarih ekle
-            if (!editingBarcode) {
-                const currentDate = new Date().toISOString();
+            if (!editingProductId) {
                 aciklama = aciklama ? `${aciklama}\n[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]` : `[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]`;
             }
 
             // Eğer düzenleme modundaysa
-            if (editingBarcode) {
-                // Barkod değiştiyse
-                if (editingBarcode !== barkod) {
-                    // Yeni barkodla ürünü ekle
-                    stokListesi[barkod] = { 
-                        ad, 
-                        marka: marka || null, 
-                        aciklama: aciklama || null,
-                        miktar, 
-                        alisFiyati,
-                        eklenmeTarihi: stokListesi[editingBarcode].eklenmeTarihi
-                    };
-                    
-                    // Eski barkodu sil
-                    delete stokListesi[editingBarcode];
-                } else {
-                    // Mevcut ürünü güncelle
-                    stokListesi[barkod] = { 
-                        ad, 
-                        marka: marka || null, 
-                        aciklama: aciklama || null,
-                        miktar, 
-                        alisFiyati,
-                        eklenmeTarihi: stokListesi[editingBarcode].eklenmeTarihi
-                    };
-                }
+            if (editingProductId) {
+                // Mevcut ürünü güncelle
+                stokListesi[editingProductId] = { 
+                    barkod,
+                    ad, 
+                    marka: marka || null, 
+                    aciklama: aciklama || null,
+                    miktar, 
+                    alisFiyati,
+                    eklenmeTarihi: stokListesi[editingProductId].eklenmeTarihi,
+                    guncellemeTarihi: new Date().toISOString()
+                };
             } else {
-                // Yeni ürün ekleme - aynı barkodlu ürün varsa miktarı artır
-                if (stokListesi[barkod]) {
-                    stokListesi[barkod].miktar += miktar;
-                    // Diğer bilgileri güncelle
-                    stokListesi[barkod].ad = ad;
-                    stokListesi[barkod].marka = marka || null;
-                    stokListesi[barkod].aciklama = aciklama || null;
-                    if (alisFiyati) stokListesi[barkod].alisFiyati = alisFiyati;
+                // Aynı barkod ve isme sahip ürünleri kontrol et
+                const similarProducts = findSimilarProducts(barkod, ad);
+                
+                if (similarProducts.length > 0) {
+                    // Benzer ürünler varsa kullanıcıya sor
+                    let productList = '<div style="text-align: left; max-height: 300px; overflow-y: auto;">';
+                    similarProducts.forEach((p, index) => {
+                        productList += `
+                            <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                                <strong>${p.ad}</strong><br>
+                                Marka: ${p.marka || '-'}<br>
+                                Stok: ${p.miktar}<br>
+                                Alış Fiyatı: ${p.alisFiyati ? p.alisFiyati.toFixed(2) : '-'} ₺<br>
+                                ${p.aciklama ? `Açıklama: ${p.aciklama.split('\n')[0]}...` : ''}
+                            </div>
+                        `;
+                    });
+                    productList += '</div>';
+                    
+                    Swal.fire({
+                        title: 'Benzer Ürünler Bulundu',
+                        html: `
+                            <p>Aynı barkod ve isme sahip ürünler var:</p>
+                            ${productList}
+                            <p style="margin-top: 15px;">Yeni varyant eklemek istiyor musunuz?</p>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yeni Varyant Ekle',
+                        cancelButtonText: 'İptal',
+                        confirmButtonColor: '#2c6fbb',
+                        width: '600px'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati);
+                        }
+                    });
                 } else {
-                    // Tamamen yeni ürün
-                    stokListesi[barkod] = { 
-                        ad, 
-                        marka: marka || null, 
-                        aciklama: aciklama || null,
-                        miktar, 
-                        alisFiyati,
-                        eklenmeTarihi: new Date().toISOString()
-                    };
+                    // Tamamen yeni ürün ekle
+                    addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati);
                 }
             }
+        }
+
+        // Yeni ürün varyantı ekle
+        function addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati) {
+            const productId = generateProductId();
+            stokListesi[productId] = { 
+                barkod,
+                ad, 
+                marka: marka || null, 
+                aciklama: aciklama || null,
+                miktar, 
+                alisFiyati,
+                eklenmeTarihi: new Date().toISOString()
+            };
             
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
             tabloGuncelle();
@@ -2237,7 +2347,7 @@
             Swal.fire({
                 icon: 'success',
                 title: 'Başarılı',
-                text: editingBarcode ? 'Ürün güncellendi.' : 'Ürün eklendi.',
+                text: editingProductId ? 'Ürün güncellendi.' : 'Ürün eklendi.',
                 showConfirmButton: false,
                 timer: 1500
             });
@@ -2246,12 +2356,12 @@
         }
 
         // Ürün silme fonksiyonu
-        function urunSil(barkod) {
-            if (!stokListesi[barkod]) return;
+        function urunSil(productId) {
+            if (!stokListesi[productId]) return;
 
             Swal.fire({
                 title: 'Silmeyi onayla',
-                html: `<b>${stokListesi[barkod].ad}</b> ürününü silmek istediğinize emin misiniz?`,
+                html: `<b>${stokListesi[productId].ad}</b> ürününü silmek istediğinize emin misiniz?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Evet, Sil',
@@ -2260,7 +2370,7 @@
                 cancelButtonColor: '#6c757d'
             }).then(result => {
                 if (result.isConfirmed) {
-                    delete stokListesi[barkod];
+                    delete stokListesi[productId];
                     localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
                     tabloGuncelle();
                     
@@ -2283,7 +2393,7 @@
             document.getElementById('aciklama').value = '';
             document.getElementById('miktar').value = '0';
             document.getElementById('alisFiyati').value = '';
-            editingBarcode = null;
+            editingProductId = null;
         }
 
         // Düşük stoklu ürünleri göster
@@ -2317,9 +2427,18 @@
         // Google API bilgileri
         const CLIENT_ID = 'BURAYA_KENDİ_CLIENT_IDİNİ_YAZ.apps.googleusercontent.com';
         const API_KEY = 'BURAYA_API_KEYİNİ_YAZ';
+        const SPREADSHEET_ID = 'BURAYA_SHEET_ID_YAZ'; // Google Sheets ID'si
 
-        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = "https://www.googleapis.com/auth/drive.file";
+        const DISCOVERY_DOCS = [
+            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+            "https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest"
+        ];
+        const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
+        
+        // Senkronizasyon durumu
+        let isOnline = navigator.onLine;
+        let lastSyncTime = localStorage.getItem('lastSyncTime') || null;
+        let syncInterval = null;
 
         // Google API yükleme ve başlatma
         function handleClientLoad() {
@@ -2332,14 +2451,271 @@
                 clientId: CLIENT_ID,
                 discoveryDocs: DISCOVERY_DOCS,
                 scope: SCOPES
+            }).then(() => {
+                // Giriş durumunu kontrol et
+                const authInstance = gapi.auth2.getAuthInstance();
+                if (authInstance.isSignedIn.get()) {
+                    updateSyncStatus('online', 'Bağlı');
+                    startAutoSync();
+                } else {
+                    updateSyncStatus('offline', 'Giriş gerekli');
+                }
+                
+                // Giriş durumu değişikliklerini dinle
+                authInstance.isSignedIn.listen((isSignedIn) => {
+                    if (isSignedIn) {
+                        updateSyncStatus('online', 'Bağlı');
+                        startAutoSync();
+                    } else {
+                        updateSyncStatus('offline', 'Giriş gerekli');
+                        stopAutoSync();
+                    }
+                });
+            }).catch(() => {
+                updateSyncStatus('offline', 'API yüklenemedi');
             });
+        }
+        
+        // Otomatik senkronizasyonu başlat
+        function startAutoSync() {
+            if (syncInterval) clearInterval(syncInterval);
+            
+            // Her 30 saniyede bir senkronize et
+            syncInterval = setInterval(() => {
+                if (isOnline && gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                    syncToCloud();
+                }
+            }, 30000);
+            
+            // İlk senkronizasyonu hemen yap
+            if (isOnline) {
+                syncFromCloud();
+            }
+        }
+        
+        // Otomatik senkronizasyonu durdur
+        function stopAutoSync() {
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
+            }
+        }
+        
+        // İnternet bağlantısını kontrol et
+        window.addEventListener('online', () => {
+            isOnline = true;
+            if (gapi && gapi.auth2 && gapi.auth2.getAuthInstance() && gapi.auth2.getAuthInstance().isSignedIn.get()) {
+                updateSyncStatus('online', 'Bağlı');
+                syncFromCloud();
+            } else {
+                updateSyncStatus('offline', 'Giriş gerekli');
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            updateSyncStatus('offline', 'Çevrimdışı');
+        });
+        
+        // Senkronizasyon durumunu güncelle
+        function updateSyncStatus(status, text) {
+            const indicator = document.getElementById('syncIndicator');
+            const statusText = document.getElementById('syncText');
+            
+            indicator.className = `sync-indicator ${status}`;
+            statusText.textContent = text;
         }
 
         // Google Drive oturumu aç
         function driveGirisYap() {
             gapi.auth2.getAuthInstance().signIn().then(() => {
                 Swal.fire('Başarılı', 'Google Drive hesabına başarıyla giriş yapıldı.', 'success');
+                startAutoSync();
             });
+        }
+        
+        // Buluta senkronize et
+        async function syncToCloud() {
+            if (!gapi.auth2.getAuthInstance().isSignedIn.get()) return;
+            
+            updateSyncStatus('syncing', 'Senkronize ediliyor...');
+            
+            try {
+                const allData = {
+                    stokListesi: stokListesi,
+                    satisGecmisi: satisGecmisi,
+                    musteriler: musteriler,
+                    lastUpdate: new Date().toISOString()
+                };
+                
+                // Ürünler sayfasını güncelle
+                await updateSheetData('Ürünler', Object.values(stokListesi).map(urun => [
+                    urun.barkod || '',
+                    urun.ad || '',
+                    urun.marka || '',
+                    urun.aciklama || '',
+                    urun.miktar || 0,
+                    urun.alisFiyati || '',
+                    urun.eklenmeTarihi || ''
+                ]));
+                
+                // Satışlar sayfasını güncelle
+                await updateSheetData('Satışlar', satisGecmisi.map(satis => [
+                    satis.tarih || '',
+                    satis.barkod || '',
+                    satis.urunAdi || '',
+                    satis.miktar || 0,
+                    satis.fiyat || 0,
+                    satis.toplam || 0,
+                    satis.borc ? 'Borç' : 'Nakit',
+                    satis.musteriId || ''
+                ]));
+                
+                // Müşteriler sayfasını güncelle
+                await updateSheetData('Müşteriler', Object.entries(musteriler).map(([id, musteri]) => [
+                    id,
+                    musteri.ad || '',
+                    musteri.telefon || '',
+                    musteri.adres || '',
+                    musteri.aciklama || ''
+                ]));
+                
+                lastSyncTime = new Date().toISOString();
+                localStorage.setItem('lastSyncTime', lastSyncTime);
+                
+                updateSyncStatus('online', 'Senkronize');
+                console.log('Bulut senkronizasyonu tamamlandı:', new Date());
+            } catch (error) {
+                console.error('Bulut senkronizasyon hatası:', error);
+                updateSyncStatus('offline', 'Senkronizasyon hatası');
+            }
+        }
+        
+        // Buluttan senkronize et
+        async function syncFromCloud() {
+            if (!gapi.auth2.getAuthInstance().isSignedIn.get()) return;
+            
+            updateSyncStatus('syncing', 'Veri indiriliyor...');
+            
+            try {
+                // Ürünleri al
+                const productsData = await getSheetData('Ürünler', 'A:G');
+                if (productsData && productsData.length > 1) {
+                    const newStokListesi = {};
+                    for (let i = 1; i < productsData.length; i++) {
+                        const row = productsData[i];
+                        if (row[0] && row[1]) { // Barkod ve ad varsa
+                            const productId = generateProductId();
+                            newStokListesi[productId] = {
+                                barkod: row[0],
+                                ad: row[1],
+                                marka: row[2] || null,
+                                aciklama: row[3] || null,
+                                miktar: parseInt(row[4]) || 0,
+                                alisFiyati: parseFloat(row[5]) || null,
+                                eklenmeTarihi: row[6] || new Date().toISOString()
+                            };
+                        }
+                    }
+                    stokListesi = newStokListesi;
+                }
+                
+                // Satışları al
+                const salesData = await getSheetData('Satışlar', 'A:H');
+                if (salesData && salesData.length > 1) {
+                    const newSatisGecmisi = [];
+                    for (let i = 1; i < salesData.length; i++) {
+                        const row = salesData[i];
+                        if (row[0] && row[1]) { // Tarih ve barkod varsa
+                            newSatisGecmisi.push({
+                                tarih: row[0],
+                                barkod: row[1],
+                                urunAdi: row[2],
+                                miktar: parseInt(row[3]) || 0,
+                                fiyat: parseFloat(row[4]) || 0,
+                                toplam: parseFloat(row[5]) || 0,
+                                borc: row[6] === 'Borç',
+                                musteriId: row[7] || null
+                            });
+                        }
+                    }
+                    satisGecmisi = newSatisGecmisi;
+                }
+                
+                // Müşterileri al
+                const customersData = await getSheetData('Müşteriler', 'A:E');
+                if (customersData && customersData.length > 1) {
+                    const newMusteriler = {};
+                    for (let i = 1; i < customersData.length; i++) {
+                        const row = customersData[i];
+                        if (row[0] && row[1]) { // ID ve ad varsa
+                            newMusteriler[row[0]] = {
+                                ad: row[1],
+                                telefon: row[2] || null,
+                                adres: row[3] || null,
+                                aciklama: row[4] || null
+                            };
+                        }
+                    }
+                    musteriler = newMusteriler;
+                }
+                
+                // LocalStorage'ı güncelle
+                localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                
+                // UI'ı güncelle
+                tabloGuncelle();
+                istatistikleriGuncelle();
+                satisGecmisiGuncelle();
+                musteriTablosuGuncelle();
+                
+                lastSyncTime = new Date().toISOString();
+                localStorage.setItem('lastSyncTime', lastSyncTime);
+                
+                updateSyncStatus('online', 'Senkronize');
+                console.log('Buluttan veri çekme tamamlandı:', new Date());
+            } catch (error) {
+                console.error('Buluttan veri çekme hatası:', error);
+                updateSyncStatus('offline', 'İndirme hatası');
+            }
+        }
+        
+        // Google Sheets'e veri yaz
+        async function updateSheetData(sheetName, data) {
+            const headers = getSheetHeaders(sheetName);
+            const values = [headers, ...data];
+            
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${sheetName}!A:Z`,
+                valueInputOption: 'RAW',
+                resource: { values: values }
+            });
+        }
+        
+        // Google Sheets'ten veri oku
+        async function getSheetData(sheetName, range) {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${sheetName}!${range}`
+            });
+            return response.result.values;
+        }
+        
+        // Sayfa başlıklarını al
+        function getSheetHeaders(sheetName) {
+            switch (sheetName) {
+                case 'Ürünler':
+                    return ['Barkod', 'Ürün Adı', 'Marka', 'Açıklama', 'Miktar', 'Alış Fiyatı', 'Eklenme Tarihi'];
+                case 'Satışlar':
+                    return ['Tarih', 'Barkod', 'Ürün Adı', 'Miktar', 'Birim Fiyat', 'Toplam', 'Ödeme Türü', 'Müşteri ID'];
+                case 'Müşteriler':
+                    return ['ID', 'Ad', 'Telefon', 'Adres', 'Açıklama'];
+                default:
+                    return [];
+            }
         }
 
         // Stok listesini Excel dosyasına çevirip Drive'a yükle
@@ -2948,16 +3324,146 @@
             });
         }
 
-        // Çok satan ürünü seç
+        // Çok satan ürünü seç (stok ekleme için)
         function selectBestSeller(barkod) {
-            if (stokListesi[barkod]) {
-                document.getElementById('barkod').value = barkod;
-                document.getElementById('urunAdi').value = stokListesi[barkod].ad;
-                document.getElementById('marka').value = stokListesi[barkod].marka || '';
-                document.getElementById('aciklama').value = stokListesi[barkod].aciklama || '';
-                document.getElementById('alisFiyati').value = stokListesi[barkod].alisFiyati || '';
+            // Barkod ile ürün ID'sini bul
+            let productId = null;
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    productId = id;
+                    break;
+                }
+            }
+            
+            if (productId && stokListesi[productId]) {
+                document.getElementById('barkod').value = stokListesi[productId].barkod;
+                document.getElementById('urunAdi').value = stokListesi[productId].ad;
+                document.getElementById('marka').value = stokListesi[productId].marka || '';
+                document.getElementById('aciklama').value = stokListesi[productId].aciklama || '';
+                document.getElementById('alisFiyati').value = stokListesi[productId].alisFiyati || '';
             }
             Swal.close();
+        }
+        
+        // Müşteri satışı için çok satanları göster
+        function showBestSellersForCustomer() {
+            const salesCount = {};
+            
+            // Satış geçmişinden ürün satış sayılarını hesapla
+            satisGecmisi.forEach(satis => {
+                if (salesCount[satis.barkod]) {
+                    salesCount[satis.barkod].miktar += satis.miktar;
+                } else {
+                    salesCount[satis.barkod] = {
+                        ad: satis.urunAdi,
+                        marka: satis.marka || '',
+                        miktar: satis.miktar,
+                        productId: findProductIdByBarcode(satis.barkod)
+                    };
+                }
+            });
+            
+            // En çok satılanları sırala ve sadece stokta olanları göster
+            const sortedSales = Object.entries(salesCount)
+                .filter(([barkod, urun]) => {
+                    const productId = findProductIdByBarcode(barkod);
+                    return productId && stokListesi[productId] && stokListesi[productId].miktar > 0;
+                })
+                .sort(([,a], [,b]) => b.miktar - a.miktar)
+                .slice(0, 10);
+            
+            if (sortedSales.length === 0) {
+                Swal.fire('Bilgi', 'Stokta bulunan çok satan ürün bulunmamaktadır.', 'info');
+                return;
+            }
+            
+            let tableHtml = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">Ürün Adı</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Marka</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Satış Miktarı</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Stok</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedSales.forEach(([barkod, urun]) => {
+                const productId = findProductIdByBarcode(barkod);
+                const currentStock = productId ? stokListesi[productId].miktar : 0;
+                
+                tableHtml += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.ad}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.marka}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.miktar}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${currentStock}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">
+                            <button class="btn btn-primary btn-sm" onclick="selectProductForCustomerSale('${productId}')">Seç</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += '</tbody></table>';
+            
+            Swal.fire({
+                title: 'Çok Satılan Ürünler',
+                html: tableHtml,
+                width: '900px',
+                confirmButtonText: 'Kapat'
+            });
+        }
+        
+        // Müşteri satışı için ürün seç
+        function selectProductForCustomerSale(productId) {
+            if (stokListesi[productId]) {
+                const product = stokListesi[productId];
+                
+                // Ürün seçim dropdown'unu güncelle
+                const productSelect = document.getElementById('saleProduct');
+                
+                // Mevcut seçenekleri kontrol et
+                let optionExists = false;
+                for (let option of productSelect.options) {
+                    if (option.value === productId) {
+                        option.selected = true;
+                        optionExists = true;
+                        break;
+                    }
+                }
+                
+                // Eğer seçenek yoksa ekle
+                if (!optionExists) {
+                    const option = document.createElement('option');
+                    option.value = productId;
+                    option.textContent = `${product.ad} ${product.marka ? '- ' + product.marka : ''} (Stok: ${product.miktar})`;
+                    option.selected = true;
+                    productSelect.appendChild(option);
+                }
+                
+                // Fiyatı otomatik doldur
+                const priceInput = document.getElementById('salePrice');
+                if (product.alisFiyati && !priceInput.value) {
+                    // Alış fiyatına %20 kar marjı ekle
+                    const suggestedPrice = product.alisFiyati * 1.2;
+                    priceInput.value = suggestedPrice.toFixed(2);
+                }
+            }
+            Swal.close();
+        }
+        
+        // Barkoda göre ürün ID'sini bul
+        function findProductIdByBarcode(barkod) {
+            for (const [productId, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    return productId;
+                }
+            }
+            return null;
         }
 
         // Müşteri detaylarını göster (isim tıklandığında)
