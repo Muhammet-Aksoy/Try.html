@@ -1,0 +1,227 @@
+{
+  "stokListesi": {
+    "230965": {
+      "ad": "V184 Ön Amörtisör",
+      "marka": "kod:2C16 18045 AA",
+      "aciklama": null,
+      "miktar": 2,
+      "alisFiyati": 1750,
+      "satisFiyati": null
+    },
+    "1C159601": {
+      "ad": "Hava Filtresi",
+      "marka": "MS",
+      "aciklama": null,
+      "miktar": 3,
+      "alisFiyati": 75,
+      "satisFiyati": null
+    },
+    "6C1118045": {
+      "ad": "Ön Amortisör",
+      "marka": "ORJ",
+      "aciklama": null,
+      "miktar": 5,
+      "alisFiyati": 2000,
+      "satisFiyati": null
+    },
+    "BK3118045 BSG": {
+      "ad": "Ön Amortisör",
+      "marka": "BSG",
+      "aciklama": null,
+      "miktar": 2,
+      "alisFiyati": 800,
+      "satisFiyati": null
+    },
+    "BK3118045 ORJ": {
+      "ad": "Ön Amortisör",
+      "marka": "ORJ",
+      "aciklama": null,
+      "miktar": 4,
+      "alisFiyati": 2580,
+      "satisFiyati": null
+    },
+    "5C161K353CC": {
+      "ad": "STEPNE TAŞIYICI Ö.ÇEKER",
+      "marka": null,
+      "aciklama": null,
+      "miktar": 1,
+      "alisFiyati": 3000,
+      "satisFiyati": null
+    },
+    "6C1118045NE": {
+      "ad": "v347 Ön Amortisör",
+      "marka": "DP",
+      "aciklama": null,
+      "miktar": 4,
+      "alisFiyati": 1500,
+      "satisFiyati": null
+    },
+    "5C161K353 BC": {
+      "ad": "STEPNE TAŞIYICI Arka Çift Teker",
+      "marka": "ORJ",
+      "aciklama": null,
+      "miktar": 6,
+      "alisFiyati": 2500,
+      "satisFiyati": null
+    },
+    "95VT1K353AA": {
+      "ad": "İSTETME TAŞIYICISI T12",
+      "marka": "SOMSAN",
+      "aciklama": null,
+      "miktar": 2,
+      "alisFiyati": 1050,
+      "satisFiyati": null
+    },
+    "Arka Disk Aynası 200PC": {
+      "ad": "8C1V 2A 315",
+      "marka": null,
+      "aciklama": null,
+      "miktar": 6,
+      "alisFiyati": 725,
+      "satisFiyati": null
+    },
+    "8C1V 1125 AA": {
+      "ad": "Ön Disk Ayna Transit - ÖÇ",
+      "marka": null,
+      "aciklama": null,
+      "miktar": 5,
+      "alisFiyati": 950,
+      "satisFiyati": null
+    },
+    "8C1V 2A 315": {
+      "ad": "Arka Disk Aynası 200PC",
+      "marka": null,
+      "aciklama": null,
+      "miktar": 6,
+      "alisFiyati": 725,
+      "satisFiyati": null
+    },
+    "BK3118045 VOTTO": {
+      "ad": "V363 Ön Amortisör",
+      "marka": "VOTTO",
+      "aciklama": null,
+      "miktar": 3,
+      "alisFiyati": 1500,
+      "satisFiyati": null
+    },
+    "5C161K353": {
+      "ad": "Tek teker istetme taşıyıcısı",
+      "marka": "DP",
+      "aciklama": null,
+      "miktar": 1,
+      "alisFiyati": 1200,
+      "satisFiyati": null
+    },
+    "BSG 30-300-021": {
+      "ad": "AMORTİSÖR ÖN SOL",
+      "marka": "BSG",
+      "aciklama": null,
+      "miktar": 0,
+      "alisFiyati": null,
+      "satisFiyati": null
+    },
+    "5C16 1K353 DC": {
+      "ad": "STEPNE TAŞIYICI Ö.ÇEKER  UZUN ŞASE",
+      "marka": "DC",
+      "aciklama": null,
+      "miktar": 1,
+      "alisFiyati": 4500,
+      "satisFiyati": null
+    },
+    "95VT1K353BA": {
+      "ad": "T15 İSTETME TAŞIYICISI",
+      "marka": "SOMSAN",
+      "aciklama": null,
+      "miktar": 4,
+      "alisFiyati": 1000,
+      "satisFiyati": null
+    },
+    "5C161K353 BC ORJ": {
+      "ad": "STEPNE TAŞIYICI Arka Çift Teker",
+      "marka": "ORJ",
+      "aciklama": null,
+      "miktar": 6,
+      "alisFiyati": 2500,
+      "satisFiyati": null
+    },
+    "YC15 2261 AA": {
+      "ad": "Arka Fren Silindirii",
+      "marka": "ciron",
+      "aciklama": "[Eklenme: 14.07.2025]",
+      "miktar": 5,
+      "alisFiyati": 320,
+      "eklenmeTarihi": "2025-07-10T14:03:03.464Z"
+    },
+    "YC15 2261  AA": {
+      "ad": "Arka Fren Silindiri",
+      "marka": "bosch",
+      "aciklama": null,
+      "miktar": 10,
+      "alisFiyati": 320
+    },
+    "0 986 486 160": {
+      "ad": "v347 üst debriyaj merkezi",
+      "marka": "BOSCH",
+      "aciklama": "Alınan Firma:AS Otomotiv",
+      "miktar": 2,
+      "alisFiyati": 1400,
+      "satisFiyati": null
+    },
+    "urun_md2q0mlv170x8": {
+      "barkod": "YC15 2261 AA",
+      "ad": "Arka Fren Silindirii",
+      "marka": "delphi",
+      "aciklama": "[Eklenme: 14.07.2025]",
+      "miktar": 3,
+      "alisFiyati": null,
+      "eklenmeTarihi": "2025-07-14T06:26:52.147Z"
+    },
+    "urun_md2q29b7l87go": {
+      "barkod": "YC15 2261 AA",
+      "ad": "Arka Fren Silindiri",
+      "marka": "Naiba",
+      "aciklama": "[Eklenme: 14.07.2025]",
+      "miktar": 19,
+      "alisFiyati": null,
+      "eklenmeTarihi": "2025-07-14T06:28:08.227Z"
+    }
+  },
+  "satisGecmisi": [
+    {
+      "id": "mcxglcdumrket",
+      "tarih": "2025-07-10T14:04:11.634Z",
+      "barkod": "1C159601",
+      "urunAdi": "Hava Filtresi",
+      "marka": "MS",
+      "miktar": 1,
+      "fiyat": 150,
+      "alisFiyati": 75,
+      "toplam": 150,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md2onl1w99yx9",
+      "tarih": "2025-07-14T05:48:43.988Z",
+      "barkod": "1C159601",
+      "urunAdi": "Hava Filtresi",
+      "marka": "MS",
+      "miktar": 1,
+      "fiyat": 150,
+      "alisFiyati": 75,
+      "toplam": 150,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    }
+  ],
+  "musteriler": {
+    "musteri_mcxglltk5fg7v": {
+      "ad": "deneme",
+      "telefon": null,
+      "adres": null
+    }
+  },
+  "tarih": "2025-07-14T09:03:56.478Z"
+}
