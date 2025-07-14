@@ -2732,8 +2732,6 @@
         // Barkod input validation and mapping
         const barkodInput = document.getElementById('barkod');
         barkodInput.addEventListener('input', function(e) {
-            // Only allow numbers (and optionally dashes)
-            this.value = this.value.replace(/[^0-9\-]/g, '');
             
             // Check if barcode exists in stokListesi
             const foundId = findProductIdByBarcode(this.value);
