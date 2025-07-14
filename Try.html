@@ -861,6 +861,9 @@
             border-radius: 4px;
             margin-left: 8px;
         }
+        .barcode-found {
+            border-color: #27ae60;
+        }
     </style>
 </head>
 <body>
@@ -1416,19 +1419,10 @@
 
         // Sayfa yüklendiğinde gerekli işlemleri başlat
         window.onload = function () {
-            fetch('/api/stok')
-                .then(res => res.json())
-                .then(data => {
-                    stokListesi = data.data || {};
-                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-                    tabloGuncelle();
-                    istatistikleriGuncelle();
-                })
-                .catch(() => {
-                    stokListesi = JSON.parse(localStorage.getItem('stokListesi')) || {};
-                    tabloGuncelle();
-                    istatistikleriGuncelle();
-                });
+            loadFromServer().then(() => {
+                tabloGuncelle();
+                istatistikleriGuncelle();
+            });
             handleClientLoad();
             
             // Senkronizasyon durumunu başlat
@@ -1970,21 +1964,18 @@
                         customerId = document.getElementById('cash-customer-select').value || null;
                     }
                     
-                    tamamlaSatis(barkod, 1, customerId, null, satisFiyati);
+                    tamamlaSatis(barkod, 1, customerId, null, satisFiyati, isCredit);
                 }
             });
         }
 
         // Satışı tamamla
-        function tamamlaSatis(barkod, miktar, musteriId, aciklama, satisFiyati) {
+        function tamamlaSatis(barkod, miktar, musteriId, aciklama, satisFiyati, isCredit = false) {
             const urun = stokListesi[barkod];
-            
-            // Stoktan düş
             urun.miktar -= miktar;
-            
             // Satış geçmişine ekle
             const satis = {
-                id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7), // Benzersiz ID
+                id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
                 tarih: new Date().toISOString(),
                 barkod: barkod,
                 urunAdi: urun.ad,
@@ -1993,32 +1984,24 @@
                 fiyat: satisFiyati,
                 alisFiyati: urun.alisFiyati || 0,
                 toplam: satisFiyati * miktar,
-                borc: musteriId !== null && aciklama !== null,
+                borc: isCredit === true, // Only true if explicitly credit
                 musteriId: musteriId,
                 aciklama: aciklama
             };
-            
             satisGecmisi.push(satis);
             localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
-            
-            // Eğer stok sıfırlandıysa ürünü sil
             if (urun.miktar === 0) {
                 Swal.fire('Bilgi', 'Bu ürünün stoğu tükendi.', 'info');
             }
-            
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
             localStorage.setItem('lastUpdateTime', new Date().toISOString());
-            
-            // Auto-save to server
             autoSaveToServer();
-            
             tabloGuncelle();
             satisGecmisiGuncelle();
-            
             Swal.fire({
                 icon: 'success',
                 title: 'Satış Tamamlandı!',
-                text: `Ürün ${musteriId ? 'borç' : 'nakit'} olarak satıldı.`,
+                text: `Ürün ${isCredit ? 'borç' : 'nakit'} olarak satıldı.`,
                 showConfirmButton: false,
                 timer: 1500
             });
@@ -3910,6 +3893,26 @@
             
             input.click();
         }
+
+        // Barcode input validation and mapping
+        const barkodInput = document.getElementById('barkod');
+        barkodInput.addEventListener('input', function(e) {
+            // Only allow numbers (and optionally dashes)
+            this.value = this.value.replace(/[^0-9\-]/g, '');
+            // Check if barcode exists in stokListesi
+            const foundId = findProductIdByBarcode(this.value);
+            if (foundId) {
+                const urun = stokListesi[foundId];
+                document.getElementById('urunAdi').value = urun.ad;
+                document.getElementById('marka').value = urun.marka || '';
+                document.getElementById('aciklama').value = urun.aciklama || '';
+                document.getElementById('miktar').value = urun.miktar;
+                document.getElementById('alisFiyati').value = urun.alisFiyati || '';
+                barkodInput.classList.add('barcode-found');
+            } else {
+                barkodInput.classList.remove('barcode-found');
+            }
+        });
     </script>
 </body>
 </html>
