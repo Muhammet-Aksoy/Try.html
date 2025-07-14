@@ -1684,10 +1684,14 @@
                     if (currentProduct) {
                         currentProductName = currentProduct.ad; // Güncel ürün adını kullan
                     }
-                    
+                    // Barkodun productId gibi özel değer olmasını engelle
+                    let barkodGoster = '';
+                    if (satis.barkod && satis.barkod.length > 0 && !satis.barkod.startsWith('product_')) {
+                        barkodGoster = satis.barkod;
+                    }
                     tr.innerHTML = `
                         <td>${tarihStr}</td>
-                        <td>${satis.barkod}</td>
+                        <td>${barkodGoster}</td>
                         <td title="Orijinal: ${satis.urunAdi}">${currentProductName}</td>
                         <td>${satis.miktar}</td>
                         <td>${satis.alisFiyati ? satis.alisFiyati.toFixed(2) : '-'}</td>
@@ -2451,7 +2455,8 @@
                     }
                 });
             }).catch(() => {
-                updateSyncStatus('offline', 'API yüklenemedi');
+                // updateSyncStatus('offline', 'API yüklenemedi'); // KALDIRILDI
+                // Hiçbir şey yapma veya alternatif bir mesaj gösterme
             });
         }
         
