@@ -864,36 +864,6 @@
     </style>
 </head>
 <body>
-    <div class="desktop-app">
-        <button title="Masaüstü Uygulaması" onclick="toggleFullscreen()">
-            <i class="fas fa-desktop"></i>
-        </button>
-    </div>
-    
-    <header>
-        <div class="container">
-            <div class="logo-container">
-                <div class="logo">
-                    <i class="fas fa-car"></i>
-                </div>
-                <div class="header-content">
-                    <div class="header-title">
-                        <h1>Sabancıoğlu Otomotiv</h1>
-                        <p>Stok ve Satış Yönetim Sistemi</p>
-                    </div>
-                    <div class="app-controls">
-                        <button class="btn btn-info" onclick="excelYedekleDrive()">
-                            <i class="fas fa-file-excel"></i> Drive'a Yedekle
-                        </button>
-                        <button class="btn btn-primary" onclick="yedekleBilgisayara()">
-                            <i class="fas fa-save"></i> Bilgisayara Yedekle
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        </header>
-
     <!-- Senkronizasyon Durumu -->
     <div class="sync-status" id="syncStatus">
         <div class="sync-indicator offline" id="syncIndicator"></div>
@@ -937,22 +907,6 @@
             <div class="tab active" data-tab="stock">Stok Yönetimi</div>
             <div class="tab" data-tab="sales">Satış Geçmişi</div>
             <div class="tab" data-tab="customers">Müşteriler</div>
-        </div>
-        
-        <!-- Veri Yönetimi Butonları -->
-        <div style="display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
-            <button onclick="exportAllData()" class="btn btn-info" style="background: var(--info); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
-                <i class="fas fa-download"></i> JSON Dışa Aktar
-            </button>
-            <button onclick="importAllData()" class="btn btn-warning" style="background: var(--warning); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
-                <i class="fas fa-upload"></i> JSON İçe Aktar
-            </button>
-            <button onclick="autoSaveToServer()" class="btn btn-success" style="background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
-                <i class="fas fa-cloud-upload-alt"></i> Sunucuya Kaydet
-            </button>
-            <button onclick="loadFromServer()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
-                <i class="fas fa-cloud-download-alt"></i> Sunucudan Yükle
-            </button>
         </div>
         
         <!-- Stok Yönetimi Paneli -->
@@ -1462,13 +1416,19 @@
 
         // Sayfa yüklendiğinde gerekli işlemleri başlat
         window.onload = function () {
-            // Sunucudan veri yüklemeyi dene
-            loadFromServer();
-            
-            tabloGuncelle();
-            istatistikleriGuncelle();
-            satisGecmisiGuncelle();
-            musteriTablosuGuncelle();
+            fetch('/api/stok')
+                .then(res => res.json())
+                .then(data => {
+                    stokListesi = data.data || {};
+                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    tabloGuncelle();
+                    istatistikleriGuncelle();
+                })
+                .catch(() => {
+                    stokListesi = JSON.parse(localStorage.getItem('stokListesi')) || {};
+                    tabloGuncelle();
+                    istatistikleriGuncelle();
+                });
             handleClientLoad();
             
             // Senkronizasyon durumunu başlat
@@ -2335,118 +2295,37 @@
             let aciklama = document.getElementById('aciklama').value.trim();
             const miktar = Number(document.getElementById('miktar').value) || 0;
             const alisFiyati = Number(document.getElementById('alisFiyati').value) || null;
-
             if (!barkod || !ad) {
                 Swal.fire('Hata', 'Barkod ve ürün adı zorunludur.', 'error');
                 return;
             }
-
-            // Eğer düzenleme modundaysa
-            if (editingProductId) {
-                // Mevcut ürünü güncelle - açıklamaya tarih EKLEMEYİN
-                stokListesi[editingProductId] = { 
-                    barkod,
-                    ad, 
-                    marka: marka || null, 
-                    aciklama: aciklama || null,
-                    miktar, 
-                    alisFiyati,
-                    eklenmeTarihi: stokListesi[editingProductId].eklenmeTarihi,
-                    guncellemeTarihi: new Date().toISOString()
-                };
-
-                // Düzenleme modunu sıfırla
-                editingProductId = null;
-                
-                // Formu temizle
-                urunFormuTemizle();
-                
-                // Tabloları güncelle
-                stokTablosuGuncelle();
-                
-                // Sunucuya kaydet
-                autoSaveToServer();
-                
-                // Başarı mesajı
-                Swal.fire('Başarılı!', 'Ürün başarıyla güncellendi.', 'success');
-                
-            } else {
-                // Yeni ürün için açıklamaya tarih ekle
-                aciklama = aciklama ? `${aciklama}\n[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]` : `[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]`;
-                
-                // Aynı barkod ve isme sahip ürünleri kontrol et
-                const similarProducts = findSimilarProducts(barkod, ad);
-                
-                if (similarProducts.length > 0) {
-                    // Benzer ürünler varsa kullanıcıya sor
-                    let productList = '<div style="text-align: left; max-height: 300px; overflow-y: auto;">';
-                    similarProducts.forEach((p, index) => {
-                        productList += `
-                            <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
-                                <strong>${p.ad}</strong><br>
-                                Marka: ${p.marka || '-'}<br>
-                                Stok: ${p.miktar}<br>
-                                Alış Fiyatı: ${p.alisFiyati ? p.alisFiyati.toFixed(2) : '-'} ₺<br>
-                                ${p.aciklama ? `Açıklama: ${p.aciklama.split('\n')[0]}...` : ''}
-                            </div>
-                        `;
-                    });
-                    productList += '</div>';
-                    
-                    Swal.fire({
-                        title: 'Benzer Ürünler Bulundu',
-                        html: `
-                            <p>Aynı barkod ve isme sahip ürünler var:</p>
-                            ${productList}
-                            <p style="margin-top: 15px;">Yeni varyant eklemek istiyor musunuz?</p>
-                        `,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yeni Varyant Ekle',
-                        cancelButtonText: 'İptal',
-                        confirmButtonColor: '#2c6fbb',
-                        width: '600px'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati);
-                        }
-                    });
-                } else {
-                    // Tamamen yeni ürün ekle
-                    addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati);
+            // Tüm özelliklere göre karşılaştırma
+            let existingId = null;
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (
+                    urun.barkod === barkod &&
+                    urun.ad === ad &&
+                    (urun.marka || '') === marka &&
+                    (urun.aciklama || '') === aciklama &&
+                    Number(urun.alisFiyati) === Number(alisFiyati)
+                ) {
+                    existingId = id;
+                    break;
                 }
             }
-        }
-
-        // Yeni ürün varyantı ekle
-        function addNewProductVariant(barkod, ad, marka, aciklama, miktar, alisFiyati) {
-            const productId = generateProductId();
-            stokListesi[productId] = { 
-                barkod,
-                ad, 
-                marka: marka || null, 
-                aciklama: aciklama || null,
-                miktar, 
-                alisFiyati,
-                eklenmeTarihi: new Date().toISOString()
-            };
-            
+            if (existingId) {
+                // Güncelle
+                stokListesi[existingId] = { barkod, ad, marka: marka || null, aciklama: aciklama || null, miktar, alisFiyati, eklenmeTarihi: stokListesi[existingId].eklenmeTarihi, guncellemeTarihi: new Date().toISOString() };
+                Swal.fire('Başarılı!', 'Ürün güncellendi.', 'success');
+            } else {
+                // Yeni ürün ekle
+                const productId = generateProductId();
+                stokListesi[productId] = { barkod, ad, marka: marka || null, aciklama: aciklama || null, miktar, alisFiyati, eklenmeTarihi: new Date().toISOString() };
+                Swal.fire('Başarılı!', 'Ürün eklendi.', 'success');
+            }
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-            localStorage.setItem('lastUpdateTime', new Date().toISOString());
-            
-            // Auto-save to server
             autoSaveToServer();
-            
             tabloGuncelle();
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Başarılı',
-                text: editingProductId ? 'Ürün güncellendi.' : 'Ürün eklendi.',
-                showConfirmButton: false,
-                timer: 1500
-            });
-
             formTemizle();
         }
 
@@ -3063,71 +2942,39 @@
                     Swal.fire('Hata', 'Barkod önizlemesi bulunamadı!', 'error');
                     return;
                 }
-                
                 const barcodeContent = barcodeContainer.innerHTML;
                 const printWindow = window.open('', '_blank');
-                
                 if (!printWindow) {
-                    Swal.fire('Hata', 'Yazdırma penceresi açılamadı! Tarayıcı popup\'ları engelliyor olabilir.', 'error');
+                    Swal.fire('Hata', 'Yazdırma penceresi açılamadı! Tarayıcı popup engelliyor olabilir.', 'error');
                     return;
                 }
-                
                 printWindow.document.write(`
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>Barkod Yazdır - ${currentBarcode}</title>
+                        <title>Barkod Yazdır</title>
                         <style>
-                            body { 
-                                font-family: Arial, sans-serif; 
-                                margin: 20px; 
-                                text-align: center; 
-                                background: white;
-                            }
-                            .barcode-text h3 { 
-                                margin: 10px 0; 
-                                font-size: 18px; 
-                                color: black;
-                            }
-                            .barcode-text p { 
-                                margin: 5px 0; 
-                                font-size: 14px; 
-                                color: black;
-                            }
-                            svg { 
-                                margin: 10px 0; 
-                                display: block;
-                                margin-left: auto;
-                                margin-right: auto;
-                            }
-                            .barcode-actions {
-                                display: none !important;
-                            }
-                            @media print {
-                                body { 
-                                    margin: 0; 
-                                    padding: 10px;
-                                }
-                            }
+                            body { font-family: Arial, sans-serif; margin: 0; text-align: center; background: white; }
+                            .barcode-text h3 { margin: 10px 0; font-size: 18px; color: black; }
+                            .barcode-text p { margin: 5px 0; font-size: 14px; color: black; }
+                            svg { margin: 10px 0; display: block; margin-left: auto; margin-right: auto; }
+                            .barcode-actions { display: none !important; }
+                            @media print { body { margin: 0; padding: 10px; } }
                         </style>
                     </head>
                     <body>
                         ${barcodeContent}
                         <script>
                             window.onload = function() {
-                                setTimeout(function() {
-                                    window.print();
-                                    window.close();
-                                }, 500);
+                                window.print();
+                                window.close();
                             };
                         <\/script>
                     </body>
                     </html>
                 `);
-                
                 printWindow.document.close();
-                
             } catch (error) {
                 console.error('Yazdırma hatası:', error);
                 Swal.fire('Hata', 'Barkod yazdırılırken bir hata oluştu!', 'error');
