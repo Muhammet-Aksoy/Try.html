@@ -2341,14 +2341,9 @@
                 return;
             }
 
-            // Eğer yeni bir ürünse açıklamaya tarih ekle
-            if (!editingProductId) {
-                aciklama = aciklama ? `${aciklama}\n[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]` : `[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]`;
-            }
-
             // Eğer düzenleme modundaysa
             if (editingProductId) {
-                // Mevcut ürünü güncelle
+                // Mevcut ürünü güncelle - açıklamaya tarih EKLEMEYİN
                 stokListesi[editingProductId] = { 
                     barkod,
                     ad, 
@@ -2359,7 +2354,26 @@
                     eklenmeTarihi: stokListesi[editingProductId].eklenmeTarihi,
                     guncellemeTarihi: new Date().toISOString()
                 };
+
+                // Düzenleme modunu sıfırla
+                editingProductId = null;
+                
+                // Formu temizle
+                urunFormuTemizle();
+                
+                // Tabloları güncelle
+                stokTablosuGuncelle();
+                
+                // Sunucuya kaydet
+                autoSaveToServer();
+                
+                // Başarı mesajı
+                Swal.fire('Başarılı!', 'Ürün başarıyla güncellendi.', 'success');
+                
             } else {
+                // Yeni ürün için açıklamaya tarih ekle
+                aciklama = aciklama ? `${aciklama}\n[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]` : `[Eklenme: ${new Date().toLocaleDateString('tr-TR')}]`;
+                
                 // Aynı barkod ve isme sahip ürünleri kontrol et
                 const similarProducts = findSimilarProducts(barkod, ad);
                 
@@ -2994,73 +3008,130 @@
             updateSalesSummary(filteredSales);
         }
         
-        // Barkod basma fonksiyonu
+        // Barkod basma fonksiyonu - HATALAR DÜZELTİLDİ
         function barkodBas(barkod) {
             currentBarcode = barkod;
-            const urun = stokListesi[barkod];
+            
+            // Ürünü stok listesinden bul
+            let urun = null;
+            for (const [id, product] of Object.entries(stokListesi)) {
+                if (product.barkod === barkod) {
+                    urun = product;
+                    break;
+                }
+            }
+            
+            if (!urun) {
+                Swal.fire('Hata', 'Ürün bulunamadı!', 'error');
+                return;
+            }
+            
             const modal = document.getElementById('barcodeModal');
             modal.style.display = 'flex';
             
             // Set the product info
-            document.getElementById('barcode-product-name').textContent = urun.ad;
+            document.getElementById('barcode-product-name').textContent = urun.ad || 'Ürün Adı Yok';
             document.getElementById('barcode-brand').textContent = urun.marka || '';
             
             // Clear previous barcode
-            document.getElementById("barcode").innerHTML = '';
+            const barcodeElement = document.getElementById("barcode");
+            barcodeElement.innerHTML = '';
             
             // Generate barcode
             setTimeout(() => {
-                JsBarcode("#barcode", barkod, {
-                    format: "CODE128",
-                    displayValue: true,
-                    fontSize: 20,
-                    margin: 10
-                });
+                try {
+                    JsBarcode("#barcode", barkod, {
+                        format: "CODE128",
+                        displayValue: true,
+                        fontSize: 20,
+                        margin: 10,
+                        width: 2,
+                        height: 100
+                    });
+                } catch (error) {
+                    console.error('Barkod oluşturma hatası:', error);
+                    barcodeElement.innerHTML = '<p style="color: red;">Barkod oluşturulamadı!</p>';
+                }
             }, 100);
         }
 
-        // Barkod yazdırma
+        // Barkod yazdırma - GELİŞTİRİLDİ
         function printBarcode() {
-            const printWindow = window.open('', '_blank');
-            const barcodeContent = document.querySelector('.barcode-container').innerHTML;
-            
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Barkod Yazdır</title>
-                    <style>
-                        body { 
-                            font-family: Arial, sans-serif; 
-                            margin: 20px; 
-                            text-align: center; 
-                        }
-                        .barcode-text h3 { 
-                            margin: 10px 0; 
-                            font-size: 18px; 
-                        }
-                        .barcode-text p { 
-                            margin: 5px 0; 
-                            font-size: 14px; 
-                        }
-                        svg { 
-                            margin: 10px 0; 
-                        }
-                        @media print {
-                            body { margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${barcodeContent}
-                </body>
-                </html>
-            `);
-            
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
+            try {
+                const barcodeContainer = document.querySelector('.barcode-container');
+                if (!barcodeContainer) {
+                    Swal.fire('Hata', 'Barkod önizlemesi bulunamadı!', 'error');
+                    return;
+                }
+                
+                const barcodeContent = barcodeContainer.innerHTML;
+                const printWindow = window.open('', '_blank');
+                
+                if (!printWindow) {
+                    Swal.fire('Hata', 'Yazdırma penceresi açılamadı! Tarayıcı popup\'ları engelliyor olabilir.', 'error');
+                    return;
+                }
+                
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Barkod Yazdır - ${currentBarcode}</title>
+                        <style>
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                margin: 20px; 
+                                text-align: center; 
+                                background: white;
+                            }
+                            .barcode-text h3 { 
+                                margin: 10px 0; 
+                                font-size: 18px; 
+                                color: black;
+                            }
+                            .barcode-text p { 
+                                margin: 5px 0; 
+                                font-size: 14px; 
+                                color: black;
+                            }
+                            svg { 
+                                margin: 10px 0; 
+                                display: block;
+                                margin-left: auto;
+                                margin-right: auto;
+                            }
+                            .barcode-actions {
+                                display: none !important;
+                            }
+                            @media print {
+                                body { 
+                                    margin: 0; 
+                                    padding: 10px;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${barcodeContent}
+                        <script>
+                            window.onload = function() {
+                                setTimeout(function() {
+                                    window.print();
+                                    window.close();
+                                }, 500);
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                
+            } catch (error) {
+                console.error('Yazdırma hatası:', error);
+                Swal.fire('Hata', 'Barkod yazdırılırken bir hata oluştu!', 'error');
+            }
         }
         
         // Müşteri panelini aç
@@ -3680,16 +3751,18 @@
         // Global değişkenler
         let currentTargetSelect = null;
 
-        // Auto-save to server function
+        // Auto-save to server function - TÜM VERİLERİ KAYDET
         async function autoSaveToServer() {
             try {
-                const response = await fetch('/urunler', {
+                const response = await fetch('/api/tum-veriler', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        stokListesi: stokListesi
+                        stokListesi: stokListesi,
+                        satisGecmisi: satisGecmisi,
+                        musteriler: musteriler
                     })
                 });
 
@@ -3698,7 +3771,17 @@
                 }
 
                 const result = await response.json();
-                console.log('Data saved to server:', result);
+                console.log('Tüm veriler sunucuya kaydedildi:', result);
+                
+                // Başarılı kaydetme bildirimi (sessiz)
+                if (result.success) {
+                    // LocalStorage'a da kaydet
+                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                    localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                    localStorage.setItem('lastUpdateTime', new Date().toISOString());
+                }
+                
                 return result;
             } catch (error) {
                 console.error('Auto-save failed:', error);
@@ -3708,30 +3791,51 @@
             }
         }
 
-        // Load data from server on startup
+        // Load data from server on startup - TÜM VERİLERİ YÜKLEe
         async function loadFromServer() {
             try {
-                const response = await fetch('/urunler');
+                const response = await fetch('/api/tum-veriler');
                 if (response.ok) {
                     const result = await response.json();
-                    if (result.success && result.data && Object.keys(result.data).length > 0) {
-                        // Merge server data with localStorage data
-                        const serverData = result.data;
-                        const localData = JSON.parse(localStorage.getItem('stokListesi')) || {};
+                    if (result.success && result.data) {
+                        // Server verilerini al
+                        const serverStok = result.data.stokListesi || {};
+                        const serverSatis = result.data.satisGecmisi || [];
+                        const serverMusteriler = result.data.musteriler || {};
                         
-                        // Check if local data is newer
+                        // Local verileri al
+                        const localStok = JSON.parse(localStorage.getItem('stokListesi')) || {};
+                        const localSatis = JSON.parse(localStorage.getItem('satisGecmisi')) || [];
+                        const localMusteriler = JSON.parse(localStorage.getItem('musteriler')) || {};
+                        
+                        // Check if local data exists
                         const localTimestamp = localStorage.getItem('lastUpdateTime');
-                        const now = new Date().toISOString();
+                        const hasLocalData = Object.keys(localStok).length > 0 || localSatis.length > 0 || Object.keys(localMusteriler).length > 0;
                         
-                        if (!localTimestamp || Object.keys(localData).length === 0) {
+                        if (!localTimestamp || !hasLocalData) {
                             // Use server data if no local data
-                            stokListesi = serverData;
+                            stokListesi = serverStok;
+                            satisGecmisi = serverSatis;
+                            musteriler = serverMusteriler;
+                            
+                            // LocalStorage'a kaydet
                             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-                            localStorage.setItem('lastUpdateTime', now);
-                            showNotification('Veriler sunucudan yüklendi', 'success');
+                            localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                            localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                            localStorage.setItem('lastUpdateTime', new Date().toISOString());
+                            
+                            // UI'yi güncelle
+                            stokTablosuGuncelle();
+                            satisGecmisiGuncelle();
+                            musteriTablosuGuncelle();
+                            
+                            showNotification('Tüm veriler sunucudan yüklendi', 'success');
                         } else {
                             // Use local data but offer to sync
-                            showDataSyncOptions(serverData, localData);
+                            showDataSyncOptions(
+                                { stokListesi: serverStok, satisGecmisi: serverSatis, musteriler: serverMusteriler },
+                                { stokListesi: localStok, satisGecmisi: localSatis, musteriler: localMusteriler }
+                            );
                         }
                     }
                 }
@@ -3741,23 +3845,32 @@
             }
         }
 
-        // Show data sync options
+        // Show data sync options - YENİ VERİ YAPISI DESTEĞİ
         function showDataSyncOptions(serverData, localData) {
-            const serverCount = Object.keys(serverData).length;
-            const localCount = Object.keys(localData).length;
+            const serverStokCount = Object.keys(serverData.stokListesi || {}).length;
+            const serverSatisCount = (serverData.satisGecmisi || []).length;
+            const serverMusteriCount = Object.keys(serverData.musteriler || {}).length;
+            
+            const localStokCount = Object.keys(localData.stokListesi || {}).length;
+            const localSatisCount = (localData.satisGecmisi || []).length;
+            const localMusteriCount = Object.keys(localData.musteriler || {}).length;
             
             Swal.fire({
                 title: 'Veri Senkronizasyonu',
                 html: `
                     <p>Hem sunucuda hem de tarayıcıda veriler bulundu:</p>
                     <div style="display: flex; justify-content: space-around; margin: 20px 0;">
-                        <div style="text-align: center;">
+                        <div style="text-align: center; border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
                             <strong>Sunucu</strong><br>
-                            ${serverCount} ürün
+                            🏪 ${serverStokCount} ürün<br>
+                            💰 ${serverSatisCount} satış<br>
+                            👥 ${serverMusteriCount} müşteri
                         </div>
-                        <div style="text-align: center;">
+                        <div style="text-align: center; border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
                             <strong>Tarayıcı</strong><br>
-                            ${localCount} ürün
+                            🏪 ${localStokCount} ürün<br>
+                            💰 ${localSatisCount} satış<br>
+                            👥 ${localMusteriCount} müşteri
                         </div>
                     </div>
                     <p>Hangi veriyi kullanmak istiyorsunuz?</p>
@@ -3772,23 +3885,52 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Use server data
-                    stokListesi = serverData;
+                    stokListesi = serverData.stokListesi || {};
+                    satisGecmisi = serverData.satisGecmisi || [];
+                    musteriler = serverData.musteriler || {};
+                    
+                    // LocalStorage'a kaydet
                     localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-                    tabloGuncelle();
+                    localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                    localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                    
+                    // UI'yi güncelle
+                    stokTablosuGuncelle();
+                    satisGecmisiGuncelle();
+                    musteriTablosuGuncelle();
+                    
                     showNotification('Sunucu verileri yüklendi', 'success');
                 } else if (result.isDenied) {
                     // Use local data and save to server
-                    stokListesi = localData;
+                    stokListesi = localData.stokListesi || {};
+                    satisGecmisi = localData.satisGecmisi || [];
+                    musteriler = localData.musteriler || {};
+                    
                     autoSaveToServer();
                     showNotification('Tarayıcı verileri kullanılıyor ve sunucuya kaydediliyor', 'success');
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Merge data
-                    const mergedData = { ...serverData, ...localData };
-                    stokListesi = mergedData;
+                    // Merge data (sadece stok için - satış ve müşteri verileri üzerine yazılmaz)
+                    const mergedStok = { ...(serverData.stokListesi || {}), ...(localData.stokListesi || {}) };
+                    const mergedSatis = [...(serverData.satisGecmisi || []), ...(localData.satisGecmisi || [])];
+                    const mergedMusteriler = { ...(serverData.musteriler || {}), ...(localData.musteriler || {}) };
+                    
+                    stokListesi = mergedStok;
+                    satisGecmisi = mergedSatis;
+                    musteriler = mergedMusteriler;
+                    
+                    // LocalStorage'a kaydet
                     localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                    localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                    
                     autoSaveToServer();
-                    tabloGuncelle();
-                    showNotification(`Veriler birleştirildi (${Object.keys(mergedData).length} ürün)`, 'success');
+                    
+                    // UI'yi güncelle
+                    stokTablosuGuncelle();
+                    satisGecmisiGuncelle();
+                    musteriTablosuGuncelle();
+                    
+                    showNotification(`Veriler birleştirildi (${Object.keys(mergedStok).length} ürün, ${mergedSatis.length} satış, ${Object.keys(mergedMusteriler).length} müşteri)`, 'success');
                 }
                 localStorage.setItem('lastUpdateTime', new Date().toISOString());
             });

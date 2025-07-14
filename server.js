@@ -8,22 +8,34 @@ const PORT = 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static('.'));
 
 // Veriler klasörünü oluştur
 const dataDir = path.join(__dirname, 'veriler');
 const stockFile = path.join(dataDir, 'stok.json');
+const salesFile = path.join(dataDir, 'satisGecmisi.json');
+const customersFile = path.join(dataDir, 'musteriler.json');
+const allDataFile = path.join(dataDir, 'tumVeriler.json');
 
-// Başlangıçta veriler klasörünü ve stok.json dosyasını oluştur
+// Başlangıçta veriler klasörünü ve dosyaları oluştur
 async function initializeData() {
     try {
         await fs.ensureDir(dataDir);
         
-        // Eğer stok.json yoksa boş bir obje ile oluştur
-        if (!await fs.pathExists(stockFile)) {
-            await fs.writeJson(stockFile, {}, { spaces: 2 });
-            console.log('stok.json dosyası oluşturuldu');
+        // Dosyalar yoksa boş objeler ile oluştur
+        const filesToInit = [
+            { file: stockFile, data: {} },
+            { file: salesFile, data: [] },
+            { file: customersFile, data: {} },
+            { file: allDataFile, data: { stokListesi: {}, satisGecmisi: [], musteriler: {} } }
+        ];
+
+        for (const item of filesToInit) {
+            if (!await fs.pathExists(item.file)) {
+                await fs.writeJson(item.file, item.data, { spaces: 2 });
+                console.log(`${path.basename(item.file)} dosyası oluşturuldu`);
+            }
         }
     } catch (error) {
         console.error('Veri klasörü oluşturulurken hata:', error);
@@ -32,7 +44,72 @@ async function initializeData() {
 
 // API Routes
 
-// GET /urunler - Tüm ürünleri döndür
+// GET /api/tum-veriler - Tüm verileri döndür
+app.get('/api/tum-veriler', async (req, res) => {
+    try {
+        const stokData = await fs.readJson(stockFile);
+        const salesData = await fs.readJson(salesFile);
+        const customersData = await fs.readJson(customersFile);
+        
+        res.json({
+            success: true,
+            data: {
+                stokListesi: stokData,
+                satisGecmisi: salesData,
+                musteriler: customersData
+            },
+            message: 'Tüm veriler başarıyla getirildi'
+        });
+    } catch (error) {
+        console.error('Veriler okunurken hata:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Veriler okunurken hata oluştu',
+            error: error.message
+        });
+    }
+});
+
+// POST /api/tum-veriler - Tüm verileri kaydet
+app.post('/api/tum-veriler', async (req, res) => {
+    try {
+        const { stokListesi, satisGecmisi, musteriler } = req.body;
+        
+        if (!stokListesi || !satisGecmisi || !musteriler) {
+            return res.status(400).json({
+                success: false,
+                message: 'Eksik veri: stokListesi, satisGecmisi ve musteriler gerekli'
+            });
+        }
+
+        // Verileri ayrı dosyalara kaydet
+        await fs.writeJson(stockFile, stokListesi, { spaces: 2 });
+        await fs.writeJson(salesFile, satisGecmisi, { spaces: 2 });
+        await fs.writeJson(customersFile, musteriler, { spaces: 2 });
+        
+        // Tüm verileri tek dosyaya da kaydet (yedek için)
+        await fs.writeJson(allDataFile, { stokListesi, satisGecmisi, musteriler }, { spaces: 2 });
+        
+        res.json({
+            success: true,
+            message: 'Tüm veriler başarıyla kaydedildi',
+            stats: {
+                stokSayisi: Object.keys(stokListesi).length,
+                satisSayisi: satisGecmisi.length,
+                musteriSayisi: Object.keys(musteriler).length
+            }
+        });
+    } catch (error) {
+        console.error('Veriler kaydedilirken hata:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Veriler kaydedilirken hata oluştu',
+            error: error.message
+        });
+    }
+});
+
+// Eski endpoint'ler (geriye uyumluluk için)
 app.get('/urunler', async (req, res) => {
     try {
         const stokData = await fs.readJson(stockFile);
@@ -51,7 +128,6 @@ app.get('/urunler', async (req, res) => {
     }
 });
 
-// POST /urunler - Ürün listesini güncelle (tüm listeyi yazar)
 app.post('/urunler', async (req, res) => {
     try {
         const { stokListesi } = req.body;
@@ -63,7 +139,6 @@ app.post('/urunler', async (req, res) => {
             });
         }
 
-        // Stok verisini dosyaya yaz
         await fs.writeJson(stockFile, stokListesi, { spaces: 2 });
         
         res.json({
@@ -111,11 +186,20 @@ async function startServer() {
     app.listen(PORT, () => {
         console.log(`🚀 Server çalışıyor: http://localhost:${PORT}`);
         console.log(`📁 Veriler klasörü: ${dataDir}`);
-        console.log(`📄 Stok dosyası: ${stockFile}`);
+        console.log(`📄 Veri dosyaları:`);
+        console.log(`   - Stok: ${stockFile}`);
+        console.log(`   - Satışlar: ${salesFile}`);
+        console.log(`   - Müşteriler: ${customersFile}`);
+        console.log(`   - Tüm Veriler: ${allDataFile}`);
         console.log('');
         console.log('API Endpoints:');
-        console.log(`  GET  /urunler - Tüm ürünleri getir`);
-        console.log(`  POST /urunler - Ürünleri kaydet`);
+        console.log(`  GET  /api/tum-veriler - Tüm verileri getir`);
+        console.log(`  POST /api/tum-veriler - Tüm verileri kaydet`);
+        console.log(`  GET  /urunler - Sadece ürünleri getir (eski)`);
+        console.log(`  POST /urunler - Sadece ürünleri kaydet (eski)`);
+        console.log('');
+        console.log('💡 Hibrit kullanım için optimize edildi');
+        console.log('💾 Otomatik veri kaydetme aktif');
     });
 }
 
