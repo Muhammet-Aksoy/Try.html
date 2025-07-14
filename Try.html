@@ -1433,7 +1433,7 @@
             
             // Senkronizasyon durumunu başlat
             if (isOnline) {
-                updateSyncStatus('offline', 'Bağlanıyor...');
+                updateSyncStatus('offline', ''); // 'Bağlanıyor...' yazısı kaldırıldı
             } else {
                 updateSyncStatus('offline', 'Çevrimdışı');
             }
@@ -1685,7 +1685,7 @@
                         currentProductName = currentProduct.ad; // Güncel ürün adını kullan
                     }
                     // Barkodun productId gibi özel değer olmasını engelle
-                    let barkodGoster = '';
+                    let barkodGoster = '-';
                     if (satis.barkod && satis.barkod.length > 0 && !satis.barkod.startsWith('product_')) {
                         barkodGoster = satis.barkod;
                     }
@@ -3278,25 +3278,31 @@
         // Çok satılanları göster
         function showBestSellers() {
             const salesCount = {};
-            
             // Satış geçmişinden ürün satış sayılarını hesapla
             satisGecmisi.forEach(satis => {
+                // Sadece stokta olan ve silinmemiş ürünler
+                const productId = findProductIdByBarcode(satis.barkod);
+                if (!productId || !stokListesi[productId] || stokListesi[productId].miktar <= 0) return;
                 if (salesCount[satis.barkod]) {
                     salesCount[satis.barkod].miktar += satis.miktar;
                 } else {
                     salesCount[satis.barkod] = {
                         ad: satis.urunAdi,
                         marka: satis.marka || '',
-                        miktar: satis.miktar
+                        miktar: satis.miktar,
+                        stok: stokListesi[productId].miktar,
+                        aciklama: stokListesi[productId].aciklama || ''
                     };
                 }
             });
-            
             // En çok satılanları sırala
             const sortedSales = Object.entries(salesCount)
                 .sort(([,a], [,b]) => b.miktar - a.miktar)
                 .slice(0, 10);
-            
+            if (sortedSales.length === 0) {
+                Swal.fire('Bilgi', 'Stokta bulunan çok satan ürün bulunmamaktadır.', 'info');
+                return;
+            }
             let tableHtml = `
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
@@ -3304,38 +3310,37 @@
                             <th style="padding: 10px; border: 1px solid #ddd;">Ürün Adı</th>
                             <th style="padding: 10px; border: 1px solid #ddd;">Marka</th>
                             <th style="padding: 10px; border: 1px solid #ddd;">Satış Miktarı</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Stok</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Açıklama</th>
                             <th style="padding: 10px; border: 1px solid #ddd;">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
             sortedSales.forEach(([barkod, urun]) => {
                 tableHtml += `
                     <tr>
                         <td style="padding: 8px; border: 1px solid #ddd;">${urun.ad}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${urun.marka}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">${urun.miktar}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.stok}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.aciklama}</td>
                         <td style="padding: 8px; border: 1px solid #ddd;">
                             <button class="btn btn-primary btn-sm" onclick="selectBestSeller('${barkod}')">Seç</button>
                         </td>
                     </tr>
                 `;
             });
-            
             tableHtml += '</tbody></table>';
-            
             Swal.fire({
                 title: 'Çok Satılan Ürünler',
                 html: tableHtml,
-                width: '800px',
+                width: '900px',
                 confirmButtonText: 'Kapat'
             });
         }
-
         // Çok satan ürünü seç (stok ekleme için)
         function selectBestSeller(barkod) {
-            // Barkod ile ürün ID'sini bul
             let productId = null;
             for (const [id, urun] of Object.entries(stokListesi)) {
                 if (urun.barkod === barkod) {
@@ -3343,13 +3348,13 @@
                     break;
                 }
             }
-            
             if (productId && stokListesi[productId]) {
                 document.getElementById('barkod').value = stokListesi[productId].barkod;
                 document.getElementById('urunAdi').value = stokListesi[productId].ad;
                 document.getElementById('marka').value = stokListesi[productId].marka || '';
                 document.getElementById('aciklama').value = stokListesi[productId].aciklama || '';
                 document.getElementById('alisFiyati').value = stokListesi[productId].alisFiyati || '';
+                Swal.fire('Başarılı', 'Ürün formuna aktarıldı.', 'success');
             }
             Swal.close();
         }
