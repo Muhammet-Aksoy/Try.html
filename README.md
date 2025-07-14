@@ -1,4 +1,4 @@
-# 🚗 Sabancıoğlu Otomotiv - Hibrit Stok ve Satış Yönetimi
+# Hibrit Stok ve Satış Yönetimi
 
 Bu proje, otomotiv sektörü için geliştirilmiş hibrit (server + browser) stok ve satış yönetim sistemidir. 
 
