@@ -1615,14 +1615,14 @@
                     
                     // Güncel ürün adını bul (eğer ürün hala mevcutsa)
                     let currentProductName = satis.urunAdi; // Varsayılan olarak satış kaydındaki ad
-                    const currentProduct = Object.values(stokListesi).find(urun => urun.barkod === satis.barkod);
-                    if (currentProduct) {
-                        currentProductName = currentProduct.ad; // Güncel ürün adını kullan
-                    }
-                    
-                    // Barkodun productId gibi özel değer olmasını engelle
                     let barkodGoster = '-';
-                    if (satis.barkod && satis.barkod.length > 0 && !satis.barkod.startsWith('product_')) {
+                    // Barkodun gösterimi: stokta karşılığı varsa onun barkodunu göster, yoksa satış kaydındaki barkodu göster
+                    const productEntry = Object.entries(stokListesi).find(([id, urun]) => (urun.barkod || id) === satis.barkod);
+                    if (productEntry) {
+                        const [id, urun] = productEntry;
+                        barkodGoster = urun.barkod || id;
+                        currentProductName = urun.ad;
+                    } else if (satis.barkod && satis.barkod.length > 0) {
                         barkodGoster = satis.barkod;
                     }
                     
@@ -1926,7 +1926,8 @@
             const satis = {
                 id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
                 tarih: new Date().toISOString(),
-                barkod: barkod,
+                // DÜZELTME: Ürünün gerçek barkodunu kaydet
+                barkod: urun.barkod || barkod,
                 urunAdi: urun.ad,
                 marka: urun.marka || '',
                 miktar: miktar,
