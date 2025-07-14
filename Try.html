@@ -939,6 +939,22 @@
             <div class="tab" data-tab="customers">Müşteriler</div>
         </div>
         
+        <!-- Veri Yönetimi Butonları -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
+            <button onclick="exportAllData()" class="btn btn-info" style="background: var(--info); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                <i class="fas fa-download"></i> JSON Dışa Aktar
+            </button>
+            <button onclick="importAllData()" class="btn btn-warning" style="background: var(--warning); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                <i class="fas fa-upload"></i> JSON İçe Aktar
+            </button>
+            <button onclick="autoSaveToServer()" class="btn btn-success" style="background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                <i class="fas fa-cloud-upload-alt"></i> Sunucuya Kaydet
+            </button>
+            <button onclick="loadFromServer()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                <i class="fas fa-cloud-download-alt"></i> Sunucudan Yükle
+            </button>
+        </div>
+        
         <!-- Stok Yönetimi Paneli -->
         <div id="stock-panel">
             <!-- Ürün Ekleme Formu -->
@@ -1446,6 +1462,9 @@
 
         // Sayfa yüklendiğinde gerekli işlemleri başlat
         window.onload = function () {
+            // Sunucudan veri yüklemeyi dene
+            loadFromServer();
+            
             tabloGuncelle();
             istatistikleriGuncelle();
             satisGecmisiGuncelle();
@@ -1699,10 +1718,17 @@
                         musteriAdi = musteriler[satis.musteriId].ad;
                     }
                     
+                    // Güncel ürün adını bul (eğer ürün hala mevcutsa)
+                    let currentProductName = satis.urunAdi; // Varsayılan olarak satış kaydındaki ad
+                    const currentProduct = Object.values(stokListesi).find(urun => urun.barkod === satis.barkod);
+                    if (currentProduct) {
+                        currentProductName = currentProduct.ad; // Güncel ürün adını kullan
+                    }
+                    
                     tr.innerHTML = `
                         <td>${tarihStr}</td>
                         <td>${satis.barkod}</td>
-                        <td>${satis.urunAdi}</td>
+                        <td title="Orijinal: ${satis.urunAdi}">${currentProductName}</td>
                         <td>${satis.miktar}</td>
                         <td>${satis.alisFiyati ? satis.alisFiyati.toFixed(2) : '-'}</td>
                         <td>${satis.fiyat.toFixed(2)}</td>
@@ -2017,6 +2043,11 @@
             }
             
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+            localStorage.setItem('lastUpdateTime', new Date().toISOString());
+            
+            // Auto-save to server
+            autoSaveToServer();
+            
             tabloGuncelle();
             satisGecmisiGuncelle();
             
@@ -2387,6 +2418,11 @@
             };
             
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+            localStorage.setItem('lastUpdateTime', new Date().toISOString());
+            
+            // Auto-save to server
+            autoSaveToServer();
+            
             tabloGuncelle();
             
             Swal.fire({
@@ -2417,6 +2453,11 @@
                 if (result.isConfirmed) {
                     delete stokListesi[productId];
                     localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    localStorage.setItem('lastUpdateTime', new Date().toISOString());
+                    
+                    // Auto-save to server
+                    autoSaveToServer();
+                    
                     tabloGuncelle();
                     
                     Swal.fire({
@@ -3638,6 +3679,238 @@
 
         // Global değişkenler
         let currentTargetSelect = null;
+
+        // Auto-save to server function
+        async function autoSaveToServer() {
+            try {
+                const response = await fetch('/urunler', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        stokListesi: stokListesi
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Data saved to server:', result);
+                return result;
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+                // Show a subtle notification that auto-save failed
+                showNotification('Otomatik kaydetme başarısız - veriler sadece tarayıcıda saklı', 'warning');
+                return null;
+            }
+        }
+
+        // Load data from server on startup
+        async function loadFromServer() {
+            try {
+                const response = await fetch('/urunler');
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data && Object.keys(result.data).length > 0) {
+                        // Merge server data with localStorage data
+                        const serverData = result.data;
+                        const localData = JSON.parse(localStorage.getItem('stokListesi')) || {};
+                        
+                        // Check if local data is newer
+                        const localTimestamp = localStorage.getItem('lastUpdateTime');
+                        const now = new Date().toISOString();
+                        
+                        if (!localTimestamp || Object.keys(localData).length === 0) {
+                            // Use server data if no local data
+                            stokListesi = serverData;
+                            localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                            localStorage.setItem('lastUpdateTime', now);
+                            showNotification('Veriler sunucudan yüklendi', 'success');
+                        } else {
+                            // Use local data but offer to sync
+                            showDataSyncOptions(serverData, localData);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Load from server failed:', error);
+                showNotification('Sunucudan veri yüklenemedi - yerel veriler kullanılıyor', 'info');
+            }
+        }
+
+        // Show data sync options
+        function showDataSyncOptions(serverData, localData) {
+            const serverCount = Object.keys(serverData).length;
+            const localCount = Object.keys(localData).length;
+            
+            Swal.fire({
+                title: 'Veri Senkronizasyonu',
+                html: `
+                    <p>Hem sunucuda hem de tarayıcıda veriler bulundu:</p>
+                    <div style="display: flex; justify-content: space-around; margin: 20px 0;">
+                        <div style="text-align: center;">
+                            <strong>Sunucu</strong><br>
+                            ${serverCount} ürün
+                        </div>
+                        <div style="text-align: center;">
+                            <strong>Tarayıcı</strong><br>
+                            ${localCount} ürün
+                        </div>
+                    </div>
+                    <p>Hangi veriyi kullanmak istiyorsunuz?</p>
+                `,
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: 'Sunucu Verilerini Kullan',
+                denyButtonText: 'Tarayıcı Verilerini Kullan',
+                cancelButtonText: 'Birleştir',
+                confirmButtonColor: '#3085d6',
+                denyButtonColor: '#d33'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Use server data
+                    stokListesi = serverData;
+                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    tabloGuncelle();
+                    showNotification('Sunucu verileri yüklendi', 'success');
+                } else if (result.isDenied) {
+                    // Use local data and save to server
+                    stokListesi = localData;
+                    autoSaveToServer();
+                    showNotification('Tarayıcı verileri kullanılıyor ve sunucuya kaydediliyor', 'success');
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    // Merge data
+                    const mergedData = { ...serverData, ...localData };
+                    stokListesi = mergedData;
+                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    autoSaveToServer();
+                    tabloGuncelle();
+                    showNotification(`Veriler birleştirildi (${Object.keys(mergedData).length} ürün)`, 'success');
+                }
+                localStorage.setItem('lastUpdateTime', new Date().toISOString());
+            });
+        }
+
+        // Show notification function
+        function showNotification(message, type = 'info') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            
+            Toast.fire({
+                icon: type,
+                title: message
+            });
+        }
+
+        // Export all data as JSON
+        function exportAllData() {
+            const allData = {
+                stokListesi: stokListesi,
+                satisGecmisi: satisGecmisi,
+                musteriler: musteriler,
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const dataStr = JSON.stringify(allData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sabancioglu-otomotiv-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showNotification('Veriler JSON olarak dışa aktarıldı', 'success');
+        }
+
+        // Import data from JSON
+        function importAllData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            
+                            // Validate data structure
+                            if (!importedData.stokListesi && !importedData.satisGecmisi && !importedData.musteriler) {
+                                throw new Error('Geçersiz veri formatı');
+                            }
+
+                            Swal.fire({
+                                title: 'Veri İçe Aktarımı',
+                                html: `
+                                    <p>İçe aktarılacak veriler:</p>
+                                    <ul style="text-align: left;">
+                                        <li>Ürünler: ${Object.keys(importedData.stokListesi || {}).length}</li>
+                                        <li>Satışlar: ${(importedData.satisGecmisi || []).length}</li>
+                                        <li>Müşteriler: ${Object.keys(importedData.musteriler || {}).length}</li>
+                                    </ul>
+                                    <p style="color: red; font-weight: bold;">
+                                        ⚠️ Bu işlem mevcut verilerin ÜZERİNE yazacak!
+                                    </p>
+                                `,
+                                showCancelButton: true,
+                                confirmButtonText: 'İçe Aktar',
+                                cancelButtonText: 'İptal',
+                                confirmButtonColor: '#d33'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Import data
+                                    if (importedData.stokListesi) {
+                                        stokListesi = importedData.stokListesi;
+                                        localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                                    }
+                                    if (importedData.satisGecmisi) {
+                                        satisGecmisi = importedData.satisGecmisi;
+                                        localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                                    }
+                                    if (importedData.musteriler) {
+                                        musteriler = importedData.musteriler;
+                                        localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                                    }
+
+                                    // Save to server
+                                    autoSaveToServer();
+                                    
+                                    // Update displays
+                                    tabloGuncelle();
+                                    satisGecmisiGuncelle();
+                                    musteriTablosuGuncelle();
+                                    
+                                    localStorage.setItem('lastUpdateTime', new Date().toISOString());
+                                    
+                                    showNotification('Veriler başarıyla içe aktarıldı', 'success');
+                                }
+                            });
+
+                        } catch (error) {
+                            Swal.fire('Hata', 'JSON dosyası okunamadı: ' + error.message, 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            
+            input.click();
+        }
     </script>
 </body>
 </html>
