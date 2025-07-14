@@ -1139,11 +1139,14 @@
                         </div>
                     </div>
                     <div style="margin-top: 20px; display: flex; gap: 15px;">
-                        <button class="btn btn-primary" onclick="musteriEkle()">
+                        <button class="btn btn-primary" id="musteriKaydetBtn" onclick="musteriEkle()">
                             <i class="fas fa-save"></i> Kaydet
                         </button>
                         <button class="btn btn-outline" onclick="musteriFormTemizle()">
                             <i class="fas fa-times"></i> Temizle
+                        </button>
+                        <button class="btn btn-secondary" id="musteriIptalBtn" onclick="musteriDuzenlemeIptal()" style="display: none;">
+                            <i class="fas fa-times"></i> Düzenlemeyi İptal Et
                         </button>
                     </div>
                 </div>
@@ -1819,7 +1822,9 @@
             }
             
             let id;
-            if (editingMode && editingMusteriId) {
+            const isEditing = editingMode && editingMusteriId;
+            
+            if (isEditing) {
                 id = editingMusteriId;
             } else {
                 id = 'musteri_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
@@ -1842,7 +1847,7 @@
             Swal.fire({
                 icon: 'success',
                 title: 'Başarılı',
-                text: 'Müşteri eklendi.',
+                text: isEditing ? 'Müşteri güncellendi.' : 'Müşteri eklendi.',
                 showConfirmButton: false,
                 timer: 1500
             });
@@ -1854,6 +1859,26 @@
             document.getElementById('musteriTelefon').value = '';
             document.getElementById('musteriAdres').value = '';
             document.getElementById('musteriAciklama').value = '';
+            
+            // Düzenleme modunu sıfırla
+            editingMode = false;
+            editingMusteriId = null;
+            
+            // Buton metinlerini sıfırla
+            document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-save"></i> Kaydet';
+            document.getElementById('musteriIptalBtn').style.display = 'none';
+        }
+        
+        // Müşteri düzenlemeyi iptal et
+        function musteriDuzenlemeIptal() {
+            musteriFormTemizle();
+            Swal.fire({
+                icon: 'info',
+                title: 'İptal Edildi',
+                text: 'Düzenleme işlemi iptal edildi.',
+                showConfirmButton: false,
+                timer: 1500
+            });
         }
 
         // Ürün satış fonksiyonu
@@ -2181,6 +2206,11 @@
         // Müşteri düzenle
         function musteriDuzenle(id) {
             const musteri = musteriler[id];
+            if (!musteri) {
+                Swal.fire('Hata', 'Müşteri bulunamadı.', 'error');
+                return;
+            }
+            
             document.getElementById('musteriAdi').value = musteri.ad;
             document.getElementById('musteriTelefon').value = musteri.telefon || '';
             document.getElementById('musteriAdres').value = musteri.adres || '';
@@ -2189,12 +2219,27 @@
             editingMode = true;
             editingMusteriId = id;
             
+            // Buton metinlerini güncelle
+            document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-edit"></i> Güncelle';
+            document.getElementById('musteriIptalBtn').style.display = 'inline-block';
+            
             // Müşteri panelini aç
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelector('.tab[data-tab="customers"]').classList.add('active');
             document.getElementById('stock-panel').style.display = 'none';
             document.getElementById('sales-panel').style.display = 'none';
             document.getElementById('customers-panel').style.display = 'block';
+            
+            // Form alanına odaklan
+            document.getElementById('musteriAdi').focus();
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Düzenleme Modu',
+                text: `${musteri.ad} müşterisi düzenleniyor.`,
+                showConfirmButton: false,
+                timer: 2000
+            });
         }
 
         // Müşteri sil
