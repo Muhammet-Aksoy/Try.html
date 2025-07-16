@@ -1221,6 +1221,7 @@
                     <button class="btn btn-outline" onclick="closeModal()">
                         <i class="fas fa-times"></i> Kapat
                     </button>
+                    <button class="btn btn-success" onclick="downloadBartenderFile()">Bartender için İndir</button>
                 </div>
             </div>
         </div>
@@ -3109,6 +3110,45 @@
                 }
             });
         }
+
+        function downloadBartenderFile() {
+            // Modalda gösterilen barkod ve ürün adını al
+            const barkod = document.getElementById('barcode-product-name').getAttribute('data-barkod') || '';
+            const urunAdi = document.getElementById('barcode-product-name').textContent || '';
+            // Bartender için basit bir txt/csv formatı
+            const content = `Barkod,Ürün Adı\n${barkod},${urunAdi}`;
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `barkod_${barkod}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            Swal.fire({
+                icon: 'info',
+                title: 'Bartender ile açın',
+                html: 'İndirdiğiniz dosyayı Bartender programında açarak barkod yazdırabilirsiniz.',
+                timer: 4000
+            });
+        }
+
+        function addBarkodContextMenuEvents() {
+            document.querySelectorAll('.barkod-cell').forEach(cell => {
+                cell.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    const barkod = cell.getAttribute('data-barkod');
+                    if (barkod) {
+                        const url = `https://www.b4bbasbug.com/Arama/UrunArama?TumAlanlarda=${encodeURIComponent(barkod)}`;
+                        window.open(url, '_blank');
+                    }
+                });
+            });
+        }
+
+        // Tablo güncelleme fonksiyonunun sonuna ekle:
+        addBarkodContextMenuEvents();
     </script>
 </body>
 </html>
