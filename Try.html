@@ -1520,10 +1520,7 @@
                 
                 tr.innerHTML = `
                     <td>${barkod}</td>
-                    <td class="tooltip">${urun.ad} 
-                        ${urun.marka ? `<br><small style="color: #888;">${urun.marka}</small>` : ''}
-                        ${urun.aciklama ? `<span class="tooltiptext">${urun.aciklama}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>` : ''}
-                    </td>
+                    <td title="Eklenme Tarihi: ${urun.eklenmeTarihi ? new Date(urun.eklenmeTarihi).toLocaleString('tr-TR') : '-'}">${urun.ad}</td>
                     <td>${urun.marka || '-'}</td>
                     <td>${urun.miktar}${urun.miktar === 0 ? ' <span class="stock-zero-badge">STOK BİTTİ</span>' : ''}</td>
                     <td>${urun.alisFiyati ? urun.alisFiyati.toFixed(2) : '-'}</td>
@@ -2358,7 +2355,7 @@
                 if (urun.miktar === 1) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${barkod}</td>
+                        <td>${barkod || '-'}</td>
                         <td>${urun.ad}</td>
                         <td>${urun.marka || '-'}</td>
                         <td>${urun.miktar}</td>
@@ -2524,8 +2521,16 @@
                 Swal.fire('Hata', 'Barkod değeri girilmemiş!', 'error');
                 return;
             }
-            // Bartender uygulamasına yönlendir
-            window.location.href = 'bartender://print?barcode=' + encodeURIComponent(barkod);
+            // Ürün adını bul
+            let urunAdi = '';
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    urunAdi = urun.ad || '';
+                    break;
+                }
+            }
+            // Bartender uygulamasına yönlendir (barkod ve ürün adı ile)
+            window.location.href = 'bartender://print?barcode=' + encodeURIComponent(barkod) + '&name=' + encodeURIComponent(urunAdi);
         }
         
         // Barkod yazdırma
