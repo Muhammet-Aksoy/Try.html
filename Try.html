@@ -893,6 +893,35 @@
         .notification.warning {
             background: var(--warning);
         }
+        
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 180px;
+            display: none;
+        }
+        
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .context-menu-item i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -905,6 +934,19 @@
     <div class="notification" id="notification">
         <i class="fas fa-info-circle"></i>
         <span id="notificationText"></span>
+    </div>
+    
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="contextBarcodeSearch">
+            <i class="fas fa-search"></i> Barkod ile Ara
+        </div>
+        <div class="context-menu-item" id="contextBarcodePrint">
+            <i class="fas fa-barcode"></i> Barkod Bas
+        </div>
+        <div class="context-menu-item" id="contextProductDetails">
+            <i class="fas fa-info-circle"></i> Ürün Detayları
+        </div>
     </div>
     
     <div class="container">
@@ -1221,7 +1263,6 @@
                     <button class="btn btn-outline" onclick="closeModal()">
                         <i class="fas fa-times"></i> Kapat
                     </button>
-                    <button class="btn btn-success" onclick="downloadBartenderFile()">Bartender için İndir</button>
                 </div>
             </div>
         </div>
@@ -1254,8 +1295,78 @@
         </div>
     </div>
 
-    <!-- Diğer modal'lar burada olacak ama kısaltma için kaldırıldı -->
+    <!-- Müşteri Satış Geçmişi Modal -->
+    <div class="modal" id="customerSalesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customerSalesTitle">Müşteri Satış Geçmişi</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Ürün</th>
+                                <th>Miktar</th>
+                                <th>Birim Fiyat</th>
+                                <th>Toplam</th>
+                                <th>Tür</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerSalesBody">
+                            <!-- Müşteri satış geçmişi burada listelenecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
     
+    <!-- Ürün Detayları Modal -->
+    <div class="modal" id="productDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="productDetailsTitle">Ürün Detayları</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Barkod</label>
+                        <input type="text" id="detail-barkod" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Ürün Adı</label>
+                        <input type="text" id="detail-urunAdi" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Marka</label>
+                        <input type="text" id="detail-marka" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea id="detail-aciklama" class="form-control" readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Miktar</label>
+                        <input type="text" id="detail-miktar" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Alış Fiyatı (₺)</label>
+                        <input type="text" id="detail-alisFiyati" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Eklenme Tarihi</label>
+                        <input type="text" id="detail-eklenmeTarihi" class="form-control" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Stok listesi objesi - localStorage destekli
         let stokListesi = JSON.parse(localStorage.getItem('stokListesi')) || {};
@@ -1277,9 +1388,6 @@
         
         // Geçerli barkod
         let currentBarcode = '';
-        
-        // Borçlu satış için geçici veri
-        let tempCreditSale = null;
         
         // Düzenleme modunda mı
         let editingMode = false;
@@ -1364,6 +1472,14 @@
             
             window.addEventListener('offline', () => {
                 updateSyncStatus('offline', 'Çevrimdışı');
+            });
+            
+            // Context menu kapatma
+            document.addEventListener('click', function(e) {
+                const contextMenu = document.getElementById('contextMenu');
+                if (contextMenu && !contextMenu.contains(e.target)) {
+                    contextMenu.style.display = 'none';
+                }
             });
         };
         
@@ -1520,8 +1636,8 @@
                 if (stockZeroClass) tr.classList.add(stockZeroClass);
                 
                 tr.innerHTML = `
-                    <td>${barkod}</td>
-                    <td title="Eklenme Tarihi: ${urun.eklenmeTarihi ? new Date(urun.eklenmeTarihi).toLocaleString('tr-TR') : '-'}">${urun.ad}</td>
+                    <td class="barcode-cell">${barkod}</td>
+                    <td class="product-name-cell" title="${urun.aciklama || ''}">${urun.ad}</td>
                     <td>${urun.marka || '-'}</td>
                     <td>${urun.miktar}${urun.miktar === 0 ? ' <span class="stock-zero-badge">STOK BİTTİ</span>' : ''}</td>
                     <td>${urun.alisFiyati ? urun.alisFiyati.toFixed(2) : '-'}</td>
@@ -1552,7 +1668,7 @@
                 card.innerHTML = `
                     <div class="product-header">
                         <h3 class="tooltip">${urun.ad} 
-                            ${urun.aciklama ? `<span class="tooltiptext">${urun.aciklama}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>` : ''}
+                            <span class="tooltiptext">${urun.aciklama || 'Açıklama yok'}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>
                         </h3>
                         <p>${barkod}</p>
                         ${urun.marka ? `<p style="font-size: 12px; color: #888;">${urun.marka}</p>` : ''}
@@ -1594,7 +1710,74 @@
                 noProductMessage.style.display = 'none';
             }
             
+            // Context menu için olay dinleyicileri ekle
+            addBarcodeContextMenu();
+            
             istatistikleriGuncelle();
+        }
+        
+        // Barkod hücrelerine context menu ekle
+        function addBarcodeContextMenu() {
+            const barcodeCells = document.querySelectorAll('.barcode-cell');
+            const contextMenu = document.getElementById('contextMenu');
+            const searchOption = document.getElementById('contextBarcodeSearch');
+            const printOption = document.getElementById('contextBarcodePrint');
+            const detailsOption = document.getElementById('contextProductDetails');
+            
+            barcodeCells.forEach(cell => {
+                cell.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    const barkod = this.textContent;
+                    
+                    // Context menu'yu konumlandır
+                    contextMenu.style.display = 'block';
+                    contextMenu.style.left = e.pageX + 'px';
+                    contextMenu.style.top = e.pageY + 'px';
+                    
+                    // Olayları ayarla
+                    searchOption.onclick = function() {
+                        window.open(`https://www.b4bbasbug.com/Arama/UrunArama?TumAlanlarda=${barkod}`, '_blank');
+                        contextMenu.style.display = 'none';
+                    };
+                    
+                    printOption.onclick = function() {
+                        barkodBas(barkod);
+                        contextMenu.style.display = 'none';
+                    };
+                    
+                    detailsOption.onclick = function() {
+                        showProductDetails(barkod);
+                        contextMenu.style.display = 'none';
+                    };
+                });
+            });
+        }
+        
+        // Ürün detaylarını göster
+        function showProductDetails(barkod) {
+            let productId = null;
+            let product = null;
+            
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    productId = id;
+                    product = urun;
+                    break;
+                }
+            }
+            
+            if (product) {
+                document.getElementById('detail-barkod').value = barkod;
+                document.getElementById('detail-urunAdi').value = product.ad;
+                document.getElementById('detail-marka').value = product.marka || '';
+                document.getElementById('detail-aciklama').value = product.aciklama || '';
+                document.getElementById('detail-miktar').value = product.miktar;
+                document.getElementById('detail-alisFiyati').value = product.alisFiyati || '';
+                document.getElementById('detail-eklenmeTarihi').value = product.eklenmeTarihi ? 
+                    new Date(product.eklenmeTarihi).toLocaleString('tr-TR') : '';
+                
+                document.getElementById('productDetailsModal').style.display = 'flex';
+            }
         }
         
         // Satış geçmişini güncelle
@@ -1795,7 +1978,7 @@
             editingMode = false;
             editingMusteriId = null;
             
-            // Buton metinlerini sıfırla
+            // Buton metinlerini güncelle
             document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-save"></i> Kaydet';
             document.getElementById('musteriIptalBtn').style.display = 'none';
         }
@@ -2516,22 +2699,48 @@
             updateSalesSummary(filteredSales);
         }
         
-        // Barkod basma fonksiyonu - DÜZELTİLDİ
+        // Barkod basma fonksiyonu
         function barkodBas(barkod) {
             if (!barkod) {
                 Swal.fire('Hata', 'Barkod değeri girilmemiş!', 'error');
                 return;
             }
-            // Ürün adını bul
+            
+            // Find the product by barcode
             let urunAdi = '';
+            let marka = '';
             for (const [id, urun] of Object.entries(stokListesi)) {
                 if (urun.barkod === barkod) {
                     urunAdi = urun.ad || '';
+                    marka = urun.marka || '';
                     break;
                 }
             }
-            // Bartender uygulamasına yönlendir (barkod ve ürün adı ile)
-            window.location.href = 'bartender://print?barcode=' + encodeURIComponent(barkod) + '&name=' + encodeURIComponent(urunAdi);
+            
+            // Set the product info in the modal
+            document.getElementById('barcode-product-name').textContent = urunAdi;
+            document.getElementById('barcode-brand').textContent = marka;
+            
+            // Clear previous barcode
+            document.getElementById('barcode').innerHTML = '';
+            
+            // Generate the barcode
+            try {
+                JsBarcode("#barcode", barkod, {
+                    format: "CODE128",
+                    displayValue: true,
+                    fontSize: 16,
+                    height: 40,
+                    margin: 10
+                });
+            } catch (e) {
+                console.error("Barkod oluşturma hatası:", e);
+                Swal.fire('Hata', 'Barkod oluşturulamadı!', 'error');
+                return;
+            }
+            
+            // Show the modal
+            document.getElementById('barcodeModal').style.display = 'flex';
         }
         
         // Barkod yazdırma
@@ -2711,329 +2920,28 @@
             statusText.textContent = text;
         }
         
-        // Barkod input validation and mapping
-        const barkodInput = document.getElementById('barkod');
-        barkodInput.addEventListener('input', function(e) {
+        // Müşteriye satış ekle
+        function musteriyeSatisEkle(musteriId) {
+            // Müşteri panelini aç ve satış ekleme formuna odaklan
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[data-tab="stock"]').classList.add('active');
+            document.getElementById('stock-panel').style.display = 'block';
+            document.getElementById('sales-panel').style.display = 'none';
+            document.getElementById('customers-panel').style.display = 'none';
             
-            // Check if barcode exists in stokListesi
-            const foundId = findProductIdByBarcode(this.value);
+            // Müşteriyi kaydet
+            currentCustomerForSale = musteriId;
             
-            if (foundId) {
-                const urun = stokListesi[foundId];
-                document.getElementById('urunAdi').value = urun.ad;
-                document.getElementById('marka').value = urun.marka || '';
-                document.getElementById('aciklama').value = urun.aciklama || '';
-                document.getElementById('miktar').value = urun.miktar;
-                document.getElementById('alisFiyati').value = urun.alisFiyati || '';
-                barkodInput.classList.add('barcode-found');
-            } else {
-                barkodInput.classList.remove('barcode-found');
-            }
-        });
-        
-        // Barkoda göre ürün ID'sini bul
-        function findProductIdByBarcode(barkod) {
-            for (const [productId, urun] of Object.entries(stokListesi)) {
-                if (urun.barkod === barkod) {
-                    return productId;
-                }
-            }
-            return null;
-        }
-        
-        // Müşteri detaylarını göster (isim tıklandığında)
-        function showCustomerDetails(musteriId) {
-            const musteri = musteriler[musteriId];
-            if (!musteri) return;
-            
-            // Müşterinin alışlarını hesapla
-            let toplamBorc = 0;
-            let nakitAlislar = [];
-            let borcAlislar = [];
-            
-            satisGecmisi.forEach(satis => {
-                if (satis.musteriId === musteriId) {
-                    if (satis.borc) {
-                        toplamBorc += satis.toplam;
-                        borcAlislar.push(satis);
-                    } else {
-                        nakitAlislar.push(satis);
-                    }
-                }
-            });
-            
-            let detailsHtml = `
-                <div style="text-align: left;">
-                    <h3>${musteri.ad}</h3>
-                    <p><strong>Telefon:</strong> ${musteri.telefon || '-'}</p>
-                    <p><strong>Adres:</strong> ${musteri.adres || '-'}</p>
-                    <p><strong>Açıklama:</strong> ${musteri.aciklama || '-'}</p>
-                    <p><strong>Toplam Borç:</strong> ${toplamBorc.toFixed(2)} ₺</p>
-                    <div style="margin-top: 20px;">
-                        <button class="btn btn-info" onclick="printCustomerReport('${musteriId}', 'borc')">Borç Listesi Yazdır</button>
-                        <button class="btn btn-success" onclick="printCustomerReport('${musteriId}', 'nakit')">Nakit Alış Listesi Yazdır</button>
-                    </div>
-                </div>
-            `;
-            
+            // Kullanıcıyı bilgilendir
             Swal.fire({
-                title: 'Müşteri Detayları',
-                html: detailsHtml,
-                width: '600px',
-                confirmButtonText: 'Kapat'
+                icon: 'info',
+                title: 'Satış Ekleme',
+                text: 'Lütfen stok listesinden bir ürün seçin ve satış yapın. Seçtiğiniz müşteri otomatik olarak eklenecektir.',
+                showConfirmButton: false,
+                timer: 3000
             });
         }
         
-        // Müşteri raporu yazdır
-        function printCustomerReport(musteriId, type) {
-            const musteri = musteriler[musteriId];
-            let alislar = [];
-            let baslik = '';
-            
-            satisGecmisi.forEach(satis => {
-                if (satis.musteriId === musteriiId) {
-                    if ((type === 'borc' && satis.borc) || (type === 'nakit' && !satis.borc)) {
-                        alislar.push(satis);
-                    }
-                }
-            });
-            
-            baslik = type === 'borc' ? 'Borç Alışları' : 'Nakit Alışları';
-            let toplam = alislar.reduce((sum, satis) => sum + satis.toplam, 0);
-            
-            let reportHtml = `
-                <html>
-                <head>
-                    <title>${musteri.ad} - ${baslik}</title>
-                    <style>
-                        body {
-                            font-family: Arial, sans-serif;
-                            margin: 20px;
-                        }
-                        table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin-top: 20px;
-                        }
-                        th, td {
-                            padding: 8px;
-                            border: 1px solid #ddd;
-                            text-align: left;
-                        }
-                        th {
-                            background-color: #f2f2f2;
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 20px;
-                        }
-                        .total {
-                            text-align: right;
-                            font-weight: bold;
-                            margin-top: 10px;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h2>Sabancıoğlu Otomotiv</h2>
-                        <h3>${musteri.ad} - ${baslik}</h3>
-                        <p>Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}</p>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tarih</th>
-                                <th>Ürün</th>
-                                <th>Miktar</th>
-                                <th>Birim Fiyat</th>
-                                <th>Toplam</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            alislar.forEach(satis => {
-                reportHtml += `
-                    <tr>
-                        <td>${new Date(satis.tarih).toLocaleDateString('tr-TR')}</td>
-                        <td>${satis.urunAdi}</td>
-                        <td>${satis.miktar}</td>
-                        <td>${satis.fiyat.toFixed(2)} ₺</td>
-                        <td>${satis.toplam.toFixed(2)} ₺</td>
-                    </tr>
-                `;
-            });
-            
-            reportHtml += `
-                        </tbody>
-                    </table>
-                    <div class="total">
-                        <p>Toplam: ${toplam.toFixed(2)} ₺</p>
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(reportHtml);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
-        }
-        
-        // Çok satılanları göster
-        function showBestSellers() {
-            const salesCount = {};
-            
-            // Satış geçmişinden ürün satış sayılarını hesapla
-            satisGecmisi.forEach(satis => {
-                // Sadece stokta olan ve silinmemiş ürünler
-                const productId = findProductIdByBarcode(satis.barkod);
-                if (!productId || !stokListesi[productId] || stokListesi[productId].miktar <= 0) return;
-                
-                if (salesCount[satis.barkod]) {
-                    salesCount[satis.barkod].miktar += satis.miktar;
-                } else {
-                    salesCount[satis.barkod] = {
-                        ad: satis.urunAdi,
-                        marka: satis.marka || '',
-                        miktar: satis.miktar,
-                        stok: stokListesi[productId].miktar,
-                        aciklama: stokListesi[productId].aciklama || ''
-                    };
-                }
-            });
-            
-            // En çok satılanları sırala
-            const sortedSales = Object.entries(salesCount)
-                .sort(([,a], [,b]) => b.miktar - a.miktar)
-                .slice(0, 10);
-            
-            if (sortedSales.length === 0) {
-                Swal.fire('Bilgi', 'Stokta bulunan çok satan ürün bulunmamaktadır.', 'info');
-                return;
-            }
-            
-            let tableHtml = `
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa;">
-                            <th style="padding: 10px; border: 1px solid #ddd;">Ürün Adı</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Marka</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Satış Miktarı</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Stok</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Açıklama</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            sortedSales.forEach(([barkod, urun]) => {
-                tableHtml += `
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.ad}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.marka}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.miktar}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.stok}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${urun.aciklama}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">
-                            <button class="btn btn-primary btn-sm" onclick="selectBestSeller('${barkod}')">Seç</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            tableHtml += '</tbody></table>';
-            
-            Swal.fire({
-                title: 'Çok Satılan Ürünler',
-                html: tableHtml,
-                width: '900px',
-                confirmButtonText: 'Kapat'
-            });
-        }
-        
-        // Çok satan ürünü seç (stok ekleme için)
-        function selectBestSeller(barkod) {
-            let productId = null;
-            for (const [id, urun] of Object.entries(stokListesi)) {
-                if (urun.barkod === barkod) {
-                    productId = id;
-                    break;
-                }
-            }
-            
-            if (productId && stokListesi[productId]) {
-                document.getElementById('barkod').value = stokListesi[productId].barkod;
-                document.getElementById('urunAdi').value = stokListesi[productId].ad;
-                document.getElementById('marka').value = stokListesi[productId].marka || '';
-                document.getElementById('aciklama').value = stokListesi[productId].aciklama || '';
-                document.getElementById('alisFiyati').value = stokListesi[productId].alisFiyati || '';
-                Swal.fire('Başarılı', 'Ürün formuna aktarıldı.', 'success');
-            }
-            
-            Swal.close();
-        }
-
-        // Satış sırasında yeni müşteri ekleme modalı
-        function openNewCustomerModal(selectId) {
-            Swal.fire({
-                title: 'Yeni Müşteri Ekle',
-                html: `
-                    <input type="text" id="swal-musteri-ad" class="swal2-input" placeholder="Müşteri Adı*">
-                    <input type="text" id="swal-musteri-telefon" class="swal2-input" placeholder="Telefon">
-                    <input type="text" id="swal-musteri-adres" class="swal2-input" placeholder="Adres">
-                    <input type="text" id="swal-musteri-aciklama" class="swal2-input" placeholder="Açıklama">
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Ekle',
-                cancelButtonText: 'İptal',
-                preConfirm: () => {
-                    const ad = document.getElementById('swal-musteri-ad').value.trim();
-                    const telefon = document.getElementById('swal-musteri-telefon').value.trim();
-                    const adres = document.getElementById('swal-musteri-adres').value.trim();
-                    const aciklama = document.getElementById('swal-musteri-aciklama').value.trim();
-                    if (!ad) {
-                        Swal.showValidationMessage('Müşteri adı zorunludur');
-                        return false;
-                    }
-                    return { ad, telefon, adres, aciklama };
-                }
-            }).then(result => {
-                if (result.isConfirmed && result.value) {
-                    // Yeni müşteri ID oluştur
-                    const id = 'musteri_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
-                    musteriler[id] = {
-                        ad: result.value.ad,
-                        telefon: result.value.telefon || null,
-                        adres: result.value.adres || null,
-                        aciklama: result.value.aciklama || null
-                    };
-                    saveData();
-                    musteriTablosuGuncelle();
-                    // İlgili select kutusuna yeni müşteri ekle ve seçili yap
-                    const select = document.getElementById(selectId);
-                    if (select) {
-                        const option = document.createElement('option');
-                        option.value = id;
-                        option.textContent = result.value.ad;
-                        select.appendChild(option);
-                        select.value = id;
-                    }
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Başarılı',
-                        text: 'Yeni müşteri eklendi ve seçildi.',
-                        showConfirmButton: false,
-                        timer: 1200
-                    });
-                }
-            });
-        }
-
         // Satış düzenle fonksiyonu
         function satisDuzenle(satisId) {
             const satisIndex = satisGecmisi.findIndex(s => s.id === satisId);
@@ -3110,45 +3018,6 @@
                 }
             });
         }
-
-        function downloadBartenderFile() {
-            // Modalda gösterilen barkod ve ürün adını al
-            const barkod = document.getElementById('barcode-product-name').getAttribute('data-barkod') || '';
-            const urunAdi = document.getElementById('barcode-product-name').textContent || '';
-            // Bartender için basit bir txt/csv formatı
-            const content = `Barkod,Ürün Adı\n${barkod},${urunAdi}`;
-            const blob = new Blob([content], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `barkod_${barkod}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            Swal.fire({
-                icon: 'info',
-                title: 'Bartender ile açın',
-                html: 'İndirdiğiniz dosyayı Bartender programında açarak barkod yazdırabilirsiniz.',
-                timer: 4000
-            });
-        }
-
-        function addBarkodContextMenuEvents() {
-            document.querySelectorAll('.barkod-cell').forEach(cell => {
-                cell.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                    const barkod = cell.getAttribute('data-barkod');
-                    if (barkod) {
-                        const url = `https://www.b4bbasbug.com/Arama/UrunArama?TumAlanlarda=${encodeURIComponent(barkod)}`;
-                        window.open(url, '_blank');
-                    }
-                });
-            });
-        }
-
-        // Tablo güncelleme fonksiyonunun sonuna ekle:
-        addBarkodContextMenuEvents();
     </script>
 </body>
 </html>
