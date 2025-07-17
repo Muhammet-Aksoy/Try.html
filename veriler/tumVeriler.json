@@ -1,5 +1,265 @@
 {
-  "stokListesi": {},
-  "satisGecmisi": [],
-  "musteriler": {}
+  "stokListesi": {
+    "urun_md30n3eh8sc6y": {
+      "barkod": "234",
+      "ad": "ASDF",
+      "marka": null,
+      "aciklama": null,
+      "miktar": 1,
+      "alisFiyati": 123,
+      "eklenmeTarihi": "2025-07-14T11:24:16.505Z"
+    }
+  },
+  "satisGecmisi": [
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md308aiamkb58",
+      "tarih": "2025-07-14T11:12:45.874Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md308aiamkb58",
+      "tarih": "2025-07-14T11:12:45.874Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md30no37iza9o",
+      "tarih": "2025-07-14T11:24:43.315Z",
+      "barkod": "urun_md30n3eh8sc6y",
+      "urunAdi": "ASDF",
+      "marka": "",
+      "miktar": 1,
+      "fiyat": 213,
+      "alisFiyati": 123,
+      "toplam": 213,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md30o989ontxt",
+      "tarih": "2025-07-14T11:25:10.713Z",
+      "barkod": "urun_md30n3eh8sc6y",
+      "urunAdi": "ASDF",
+      "marka": "",
+      "miktar": 1,
+      "fiyat": 123,
+      "alisFiyati": 123,
+      "toplam": 123,
+      "borc": false,
+      "musteriId": "musteri_md2z0blkr48hz",
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md308aiamkb58",
+      "tarih": "2025-07-14T11:12:45.874Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md307ccyf5w87",
+      "tarih": "2025-07-14T11:12:01.618Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md308aiamkb58",
+      "tarih": "2025-07-14T11:12:45.874Z",
+      "barkod": "urun_md3073w1e2a5s",
+      "urunAdi": "ASD",
+      "marka": "ASD",
+      "miktar": 1,
+      "fiyat": 0,
+      "alisFiyati": 0,
+      "toplam": 0,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md30no37iza9o",
+      "tarih": "2025-07-14T11:24:43.315Z",
+      "barkod": "urun_md30n3eh8sc6y",
+      "urunAdi": "ASDF",
+      "marka": "",
+      "miktar": 1,
+      "fiyat": 213,
+      "alisFiyati": 123,
+      "toplam": 213,
+      "borc": false,
+      "musteriId": null,
+      "aciklama": null
+    },
+    {
+      "id": "md30o989ontxt",
+      "tarih": "2025-07-14T11:25:10.713Z",
+      "barkod": "urun_md30n3eh8sc6y",
+      "urunAdi": "ASDF",
+      "marka": "",
+      "miktar": 1,
+      "fiyat": 123,
+      "alisFiyati": 123,
+      "toplam": 123,
+      "borc": false,
+      "musteriId": "musteri_md2z0blkr48hz",
+      "aciklama": null
+    }
+  ],
+  "musteriler": {
+    "musteri_md2yd49kchukl": {
+      "ad": "sad",
+      "telefon": "sad",
+      "adres": null,
+      "aciklama": null
+    },
+    "musteri_md2z0blkr48hz": {
+      "ad": "asd",
+      "telefon": "asd",
+      "adres": null,
+      "aciklama": null
+    },
+    "musteri_md2z0jxkxpk3l": {
+      "ad": "asd",
+      "telefon": "asd",
+      "adres": null,
+      "aciklama": null
+    },
+    "musteri_md30nvw22oxat": {
+      "ad": "SAD",
+      "telefon": "SASD",
+      "adres": null,
+      "aciklama": null
+    }
+  }
 }
