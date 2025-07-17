@@ -3,7 +3,7 @@
 Bu proje, otomotiv sektörü için geliştirilmiş hibrit (server + browser) stok ve satış yönetim sistemidir. 
 
 ## 🎉 **TÜM SORUNLAR ÇÖZÜLDÜ - Production Ready!**
-
+https://tryhtml-production.up.railway.app/
 **Son Sürüm**: Hibrit v2.0 - Tüm kullanıcı talepleri gerçekleştirildi!
 
 ## 🚀 Kurulum
