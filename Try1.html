@@ -1,0 +1,3352 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sabancıoğlu Otomotiv - Stok ve Satış Yönetimi</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c6fbb;
+            --primary-dark: #1a5ca3;
+            --secondary: #3a7ca5;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --light: #f8f9fa;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --light-gray: #ecf0f1;
+            --border: #dcdde1;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+            padding-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 15px 0;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 0 20px;
+        }
+
+        .logo {
+            background: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .logo i {
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-title {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header-title p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .sync-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .sync-indicator.online {
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-indicator.offline {
+            background: #e74c3c;
+        }
+
+        .sync-indicator.syncing {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .variant-badge {
+            background: #e8f4fd;
+            color: #2c6fbb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+
+        .app-controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 25px;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            padding: 16px 25px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Tab Styles */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--light-gray);
+            flex-wrap: wrap;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            position: relative;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            background: rgba(44, 111, 187, 0.05);
+        }
+
+        .tab:hover:not(.active) {
+            background-color: rgba(44, 111, 187, 0.05);
+        }
+
+        /* Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(44, 111, 187, 0.15);
+            outline: none;
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 15px;
+        }
+
+        .btn i {
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            background: white;
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-toggle button {
+            background: var(--light-gray);
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .view-toggle button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: var(--primary);
+            color: white;
+        }
+
+        th {
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        th:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        th.sorted-asc::after {
+            content: " \25B2";
+            font-size: 12px;
+            position: absolute;
+            right: 8px;
+        }
+
+        th.sorted-desc::after {
+            content: " \25BC";
+            font-size: 12px;
+            position: absolute;
+            right: 8px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        tbody tr:hover {
+            background-color: rgba(44, 111, 187, 0.03);
+        }
+
+        tbody tr.stock-zero {
+            background-color: rgba(231, 76, 60, 0.05);
+        }
+
+        tbody tr.stock-zero:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+
+        td {
+            padding: 12px 18px;
+        }
+
+        .profit {
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .loss {
+            color: var(--danger);
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            color: white;
+        }
+
+        .btn-edit {
+            background: var(--warning);
+        }
+
+        .btn-sell {
+            background: var(--success);
+        }
+
+        .btn-return {
+            background: var(--info);
+        }
+
+        .btn-delete {
+            background: var(--danger);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        /* Card View */
+        .card-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .product-card.stock-zero {
+            border-left: 4px solid var(--danger);
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-header {
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .product-body {
+            padding: 20px;
+        }
+
+        .product-info {
+            margin-bottom: 15px;
+        }
+
+        .product-info p {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .product-info strong {
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .product-footer {
+            padding: 15px 20px;
+            background: var(--light-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        /* Stats */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+        }
+
+        .stat-icon.primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+
+        .stat-icon.success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .stat-icon.warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .stat-info h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            color: var(--gray);
+            font-size: 15px;
+        }
+
+        /* Sales History */
+        .sales-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sales-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Credit Sales */
+        .credit-indicator {
+            background-color: #f39c12;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Sales Summary */
+        .sales-summary {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 10px;
+            min-width: 150px;
+        }
+
+        .summary-item h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+
+        .summary-item p {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .cash-sales {
+            color: var(--success);
+        }
+
+        .credit-sales {
+            color: var(--warning);
+        }
+
+        .total-sales {
+            color: var(--primary);
+        }
+
+        .profit-summary {
+            color: var(--success);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .barcode-container {
+            text-align: center;
+            margin: 20px 0;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .barcode-text {
+            margin-bottom: 15px;
+        }
+
+        .barcode-text h3 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .barcode-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 13px;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .table-controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .search-box {
+                width: 100%;
+            }
+            .sales-container {
+                flex-direction: column;
+            }
+            .sales-summary {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .card-view {
+                grid-template-columns: 1fr;
+            }
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            .tabs {
+                flex-direction: column;
+            }
+        }
+
+        /* Desktop app styling */
+        .desktop-app {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 2000;
+        }
+
+        .desktop-app button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .desktop-app button:hover {
+            background: var(--primary-dark);
+        }
+
+        .desktop-app i {
+            font-size: 24px;
+        }
+
+        /* Stock Zero */
+        .stock-zero-badge {
+            background: var(--danger);
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        .barcode-found {
+            border-color: #27ae60;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            background: #333;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification.success {
+            background: var(--success);
+        }
+        
+        .notification.error {
+            background: var(--danger);
+        }
+        
+        .notification.warning {
+            background: var(--warning);
+        }
+        
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 180px;
+            display: none;
+        }
+        
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .context-menu-item i {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-filter input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .customer-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .customer-details h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .customer-details p {
+            margin-bottom: 10px;
+            display: flex;
+        }
+
+        .customer-details p strong {
+            min-width: 120px;
+            display: inline-block;
+        }
+
+        .customer-sales-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .customer-sales-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .customer-sales-list th, 
+        .customer-sales-list td {
+            padding: 8px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+
+        .customer-sales-list th {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- Senkronizasyon Durumu -->
+    <div class="sync-status" id="syncStatus">
+        <div class="sync-indicator offline" id="syncIndicator"></div>
+        <span id="syncText">Çevrimdışı</span>
+    </div>
+    
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle"></i>
+        <span id="notificationText"></span>
+    </div>
+    
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="contextBarcodeSearchAtilgan">
+            <i class="fas fa-search"></i> Atilgan'da Ara
+        </div>
+        <div class="context-menu-item" id="contextBarcodeSearchPrensoto">
+            <i class="fas fa-search"></i> Prensoto'da Ara
+        </div>
+        <div class="context-menu-item" id="contextProductDetails">
+            <i class="fas fa-info-circle"></i> Ürün Detayları
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- İstatistik Kartları -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="totalProducts">0</h3>
+                    <p>Toplam Ürün</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="totalValue">0 ₺</h3>
+                    <p>Toplam Stok Değeri</p>
+                </div>
+            </div>
+            <div class="stat-card" id="lowStockCard" onclick="showLowStockProducts()">
+                <div class="stat-icon warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="lowStock">0</h3>
+                    <p>Düşük Stoklu Ürünler</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Menü -->
+        <div class="tabs">
+            <div class="tab active" data-tab="stock">Stok Yönetimi</div>
+            <div class="tab" data-tab="sales">Satış Geçmişi</div>
+            <div class="tab" data-tab="customers">Müşteriler</div>
+        </div>
+
+        <!-- Stok Yönetimi Paneli -->
+        <div id="stock-panel">
+            <!-- Ürün Ekleme Formu -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-plus-circle"></i> Yeni Ürün Ekle / Düzenle</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="barkod"><i class="fas fa-barcode"></i> Barkod *</label>
+                            <input type="text" id="barkod" class="form-control" placeholder="Barkod girin" required>
+                            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                                <button type="button" class="btn btn-outline" onclick="searchAtilgan()">
+                                    <i class="fas fa-search"></i> Atilgan'da Ara
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="searchPrensoto()">
+                                    <i class="fas fa-search"></i> Prensoto'da Ara
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="urunAdi"><i class="fas fa-box"></i> Ürün Adı *</label>
+                            <input type="text" id="urunAdi" class="form-control" placeholder="Ürün adı girin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="marka"><i class="fas fa-tag"></i> Marka</label>
+                            <input type="text" id="marka" class="form-control" placeholder="Marka girin">
+                        </div>
+                        <div class="form-group">
+                            <label for="aciklama"><i class="fas fa-info-circle"></i> Açıklama</label>
+                            <textarea id="aciklama" class="form-control" placeholder="Açıklama girin"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="miktar"><i class="fas fa-layer-group"></i> Miktar</label>
+                            <input type="number" id="miktar" class="form-control" placeholder="Stok miktarı" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="alisFiyati"><i class="fas fa-money-bill-wave"></i> Alış Fiyatı (₺)</label>
+                            <input type="number" id="alisFiyati" class="form-control" placeholder="Alış fiyatı girin" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="urunEkle()">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button class="btn btn-outline" onclick="formTemizle()">
+                            <i class="fas fa-times"></i> Temizle
+                        </button>
+                        <button class="btn btn-info" onclick="showBestSellers()">
+                            <i class="fas fa-star"></i> Çok Satılanlardan Seç
+                        </button>
+                        <button class="btn btn-warning" onclick="barkodBas(document.getElementById('barkod').value)">
+                            <i class="fas fa-barcode"></i> Barkod Bas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stok Listesi -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-boxes"></i> Stok Listesi</h2>
+                </div>
+                <div class="table-container">
+                    <div class="table-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Ürün ara..." oninput="aramaYap()">
+                        </div>
+                        <div class="view-toggle">
+                            <button id="tableView" class="active" onclick="toggleView('table')">
+                                <i class="fas fa-table"></i>
+                            </button>
+                            <button id="cardView" onclick="toggleView('card')">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tablo Görünümü -->
+                    <div id="table-view">
+                        <table id="stokTablosu">
+                            <thead>
+                                <tr>
+                                    <th data-sort="barkod">Barkod</th>
+                                    <th data-sort="ad">Ürün</th>
+                                    <th data-sort="marka">Marka</th>
+                                    <th data-sort="miktar">Miktar</th>
+                                    <th data-sort="alisFiyati">Alış Fiyatı (₺)</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Ürünler burada listelenecek -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Kart Görünümü -->
+                    <div id="card-view" class="card-view" style="display: none;">
+                        <!-- Ürün kartları burada listelenecek -->
+                    </div>
+
+                    <!-- Ürün bulunamadı mesajı -->
+                    <div id="noProductMessage" style="display: none; padding: 20px; text-align: center;">
+                        <p>Ürün bulunamadı. Yeni ürün eklemek ister misiniz?</p>
+                        <button class="btn btn-primary" onclick="yeniUrunEkle()" style="margin-top: 10px;">
+                            <i class="fas fa-plus"></i> Yeni Ürün Ekle
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Satış Geçmişi Paneli -->
+        <div id="sales-panel" style="display: none;">
+            <div class="sales-summary">
+                <div class="summary-item">
+                    <h3>Nakit Satış</h3>
+                    <p class="cash-sales" id="cashSalesTotal">0.00 ₺</p>
+                </div>
+                <div class="summary-item">
+                    <h3>Borç Satış</h3>
+                    <p class="credit-sales" id="creditSalesTotal">0.00 ₺</p>
+                </div>
+                <div class="summary-item">
+                    <h3>Toplam Satış</h3>
+                    <p class="total-sales" id="totalSales">0.00 ₺</p>
+                </div>
+                <div class="summary-item">
+                    <h3>Toplam Kar/Zarar</h3>
+                    <p class="profit-summary" id="profitSummary">0.00 ₺</p>
+                </div>
+            </div>
+
+            <div class="sales-container">
+                <div class="sales-filter">
+                    <button class="btn btn-outline" onclick="filterSales('daily')">
+                        <i class="fas fa-calendar-day"></i> Günlük
+                    </button>
+                    <button class="btn btn-outline" onclick="filterSales('weekly')">
+                        <i class="fas fa-calendar-week"></i> Haftalık
+                    </button>
+                    <button class="btn btn-outline" onclick="filterSales('monthly')">
+                        <i class="fas fa-calendar-alt"></i> Aylık
+                    </button>
+                    <button class="btn btn-outline" onclick="filterSales('yearly')">
+                        <i class="fas fa-calendar"></i> Yıllık
+                    </button>
+                    <button class="btn btn-outline" onclick="filterSales('all')">
+                        <i class="fas fa-list"></i> Tümü
+                    </button>
+                    <div class="date-filter">
+                        <input type="date" id="startDate">
+                        <input type="date" id="endDate">
+                        <button class="btn btn-primary" onclick="filterByDate()">Filtrele</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-history"></i> Satış Geçmişi</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="salesTable">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Barkod</th>
+                                    <th>Ürün</th>
+                                    <th>Miktar</th>
+                                    <th>Alış (₺)</th>
+                                    <th>Satış (₺)</th>
+                                    <th>Ödeme</th>
+                                    <th>Müşteri</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesBody">
+                                <!-- Satış geçmişi burada listelenecek -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Müşteriler Paneli -->
+        <div id="customers-panel" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-users"></i> Müşteri Yönetimi</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="musteriAdi"><i class="fas fa-user"></i> Müşteri Adı *</label>
+                            <input type="text" id="musteriAdi" class="form-control" placeholder="Müşteri adı girin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="musteriTelefon"><i class="fas fa-phone"></i> Telefon</label>
+                            <input type="text" id="musteriTelefon" class="form-control" placeholder="Telefon girin">
+                        </div>
+                        <div class="form-group">
+                            <label for="musteriAdres"><i class="fas fa-map-marker-alt"></i> Adres</label>
+                            <textarea id="musteriAdres" class="form-control" placeholder="Adres girin"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="musteriAciklama"><i class="fas fa-comment"></i> Açıklama</label>
+                            <textarea id="musteriAciklama" class="form-control" placeholder="Müşteri hakkında notlar..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; gap: 15px;">
+                        <button class="btn btn-primary" id="musteriKaydetBtn" onclick="musteriEkle()">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button class="btn btn-outline" onclick="musteriFormTemizle()">
+                            <i class="fas fa-times"></i> Temizle
+                        </button>
+                        <button class="btn btn-secondary" id="musteriIptalBtn" onclick="musteriDuzenlemeIptal()" style="display: none;">
+                            <i class="fas fa-times"></i> Düzenlemeyi İptal Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-list"></i> Müşteri Listesi</h2>
+                </div>
+                <div class="table-container">
+                    <div class="table-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="customerSearchInput" placeholder="Müşteri ara..." oninput="musteriAramaYap()">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-info" onclick="showBestSellers()">
+                                <i class="fas fa-star"></i> Çok Satılanlar
+                            </button>
+                        </div>
+                    </div>
+                    <table id="musteriTablosu">
+                        <thead>
+                            <tr>
+                                <th data-sort="ad">Müşteri Adı</th>
+                                <th data-sort="telefon">Telefon</th>
+                                <th>Toplam Borç (₺)</th>
+                                <th>Satın Alınan Ürünler</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="musteriBody">
+                            <!-- Müşteriler burada listelenecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barkod Modal -->
+    <div class="modal" id="barcodeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Barkod Bas</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="barcode-container">
+                    <div class="barcode-text">
+                        <h3>Sabancıoğlu Otomotiv</h3>
+                        <p id="barcode-product-name"></p>
+                        <p id="barcode-brand"></p>
+                        <p>0342 335 2171</p>
+                    </div>
+                    <svg id="barcode"></svg>
+                </div>
+                <div class="barcode-actions">
+                    <button class="btn btn-primary" onclick="printBarcode()">
+                        <i class="fas fa-print"></i> Yazdır
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal()">
+                        <i class="fas fa-times"></i> Kapat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Düşük Stok Modal -->
+    <div class="modal" id="lowStockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Düşük Stoklu Ürünler (Stok = 1)</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Barkod</th>
+                                <th>Ürün</th>
+                                <th>Marka</th>
+                                <th>Miktar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowStockBody">
+                            <!-- Düşük stoklu ürünler burada listelenecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Müşteri Satış Geçmişi Modal -->
+    <div class="modal" id="customerSalesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customerSalesTitle">Müşteri Satış Geçmişi</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Ürün</th>
+                                <th>Miktar</th>
+                                <th>Birim Fiyat</th>
+                                <th>Toplam</th>
+                                <th>Tür</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerSalesBody">
+                            <!-- Müşteri satış geçmişi burada listelenecek -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ürün Detayları Modal -->
+    <div class="modal" id="productDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="productDetailsTitle">Ürün Detayları</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Barkod</label>
+                        <input type="text" id="detail-barkod" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Ürün Adı</label>
+                        <input type="text" id="detail-urunAdi" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Marka</label>
+                        <input type="text" id="detail-marka" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea id="detail-aciklama" class="form-control" readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Miktar</label>
+                        <input type="text" id="detail-miktar" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Alış Fiyatı (₺)</label>
+                        <input type="text" id="detail-alisFiyati" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Eklenme Tarihi</label>
+                        <input type="text" id="detail-eklenmeTarihi" class="form-control" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Müşteri Detayları Modal -->
+    <div class="modal" id="customerDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="customerDetailsTitle">Müşteri Detayları</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="customer-details" id="customerDetailsContent">
+                    <!-- Müşteri detayları burada gösterilecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Stok listesi objesi - localStorage destekli
+        let stokListesi = JSON.parse(localStorage.getItem('stokListesi')) || {};
+        
+        // Satış geçmişi
+        let satisGecmisi = JSON.parse(localStorage.getItem('satisGecmisi')) || [];
+        
+        // Müşteriler
+        let musteriler = JSON.parse(localStorage.getItem('musteriler')) || {};
+        
+        // Görünüm ayarları
+        let currentView = 'table';
+        
+        // Sıralama ayarları
+        let currentSort = { column: null, direction: 'asc' };
+        
+        // Müşteri sıralama ayarları
+        let currentCustomerSort = { column: null, direction: 'asc' };
+        
+        // Geçerli barkod
+        let currentBarcode = '';
+        
+        // Düzenleme modunda mı
+        let editingMode = false;
+        
+        // Düzenlenen müşteri ID
+        let editingMusteriId = null;
+        
+        // Düzenlenen ürün ID'si
+        let editingProductId = null;
+        
+        // Düzenlenen satış ID
+        let editingSaleId = null;
+        
+        // Müşteriye satış eklemede kullanılacak müşteri ID
+        let currentCustomerForSale = null;
+
+        // Sayfa yüklendiğinde gerekli işlemleri başlat
+        window.onload = function() {
+            // Verileri localStorage'dan yükle
+            loadData();
+            
+            // Tablo ve istatistikleri güncelle
+            tabloGuncelle();
+            istatistikleriGuncelle();
+            
+            // Senkronizasyon durumunu başlat
+            if (navigator.onLine) {
+                updateSyncStatus('online', 'Bağlı');
+            } else {
+                updateSyncStatus('offline', 'Çevrimdışı');
+            }
+
+            // Tab menü olayları
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Aktif tabı güncelle
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // İlgili paneli göster
+                    document.getElementById('stock-panel').style.display = 'none';
+                    document.getElementById('sales-panel').style.display = 'none';
+                    document.getElementById('customers-panel').style.display = 'none';
+                    
+                    if (tab.dataset.tab === 'stock') {
+                        document.getElementById('stock-panel').style.display = 'block';
+                    } else if (tab.dataset.tab === 'sales') {
+                        document.getElementById('sales-panel').style.display = 'block';
+                        satisGecmisiGuncelle();
+                    } else if (tab.dataset.tab === 'customers') {
+                        document.getElementById('customers-panel').style.display = 'block';
+                        musteriTablosuGuncelle();
+                    }
+                });
+            });
+            
+            // Sıralama olayları
+            document.querySelectorAll('#stokTablosu th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.dataset.sort;
+                    sortTable(column);
+                });
+            });
+            
+            // Müşteri sıralama olayları
+            document.querySelectorAll('#musteriTablosu th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.dataset.sort;
+                    sortCustomerTable(column);
+                });
+            });
+            
+            // Veri kaybını önlemek için periyodik yedekleme
+            setInterval(() => {
+                saveData();
+            }, 30000); // 30 saniyede bir kaydet
+            
+            // İnternet bağlantı durumunu izle
+            window.addEventListener('online', () => {
+                updateSyncStatus('online', 'Bağlı');
+            });
+            
+            window.addEventListener('offline', () => {
+                updateSyncStatus('offline', 'Çevrimdışı');
+            });
+            
+            // Context menu kapatma
+            document.addEventListener('click', function(e) {
+                const contextMenu = document.getElementById('contextMenu');
+                if (contextMenu && !contextMenu.contains(e.target)) {
+                    contextMenu.style.display = 'none';
+                }
+            });
+        };
+        
+        // Verileri localStorage'dan yükle
+        function loadData() {
+            const storedStok = localStorage.getItem('stokListesi');
+            if (storedStok) {
+                stokListesi = JSON.parse(storedStok);
+            }
+            
+            const storedSatis = localStorage.getItem('satisGecmisi');
+            if (storedSatis) {
+                satisGecmisi = JSON.parse(storedSatis);
+            }
+            
+            const storedMusteriler = localStorage.getItem('musteriler');
+            if (storedMusteriler) {
+                musteriler = JSON.parse(storedMusteriler);
+            }
+        }
+        
+        // Verileri localStorage'a kaydet
+        function saveData() {
+            localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+            localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+            localStorage.setItem('musteriler', JSON.stringify(musteriler));
+            showNotification('Veriler otomatik kaydedildi', 'success');
+        }
+        
+        // Bildirim göster
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            
+            notification.className = 'notification';
+            text.textContent = message;
+            
+            // Tip'e göre sınıf ekle
+            if (type === 'success') {
+                notification.classList.add('success');
+            } else if (type === 'error') {
+                notification.classList.add('error');
+            } else if (type === 'warning') {
+                notification.classList.add('warning');
+            }
+            
+            // Bildirimi göster
+            notification.classList.add('show');
+            
+            // 3 saniye sonra gizle
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // İstatistikleri güncelle
+        function istatistikleriGuncelle() {
+            const urunSayisi = Object.keys(stokListesi).length;
+            document.getElementById('totalProducts').textContent = urunSayisi;
+            
+            let toplamDeger = 0;
+            let dusukStok = 0;
+            
+            for (const [barkod, urun] of Object.entries(stokListesi)) {
+                // Alış fiyatı ile stok değerini hesapla
+                toplamDeger += urun.miktar * (urun.alisFiyati || 0);
+                
+                if (urun.miktar === 1) {
+                    dusukStok++;
+                }
+            }
+            
+            document.getElementById('totalValue').textContent = toplamDeger.toFixed(2) + ' ₺';
+            document.getElementById('lowStock').textContent = dusukStok;
+            
+            // Satış istatistiklerini güncelle
+            updateSalesSummary(satisGecmisi);
+        }
+        
+        // Satış özetini güncelle
+        function updateSalesSummary(salesArray) {
+            let cashTotal = 0;
+            let creditTotal = 0;
+            let toplamKarZarar = 0;
+            
+            if (salesArray && salesArray.length > 0) {
+                salesArray.forEach(satis => {
+                    if (satis.borc) {
+                        creditTotal += satis.toplam;
+                    } else {
+                        cashTotal += satis.toplam;
+                    }
+                    
+                    if (satis.alisFiyati !== undefined && satis.fiyat !== undefined) {
+                        toplamKarZarar += (satis.fiyat - satis.alisFiyati) * satis.miktar;
+                    }
+                });
+            }
+            
+            const totalSales = cashTotal + creditTotal;
+            
+            document.getElementById('cashSalesTotal').textContent = cashTotal.toFixed(2) + ' ₺';
+            document.getElementById('creditSalesTotal').textContent = creditTotal.toFixed(2) + ' ₺';
+            document.getElementById('totalSales').textContent = totalSales.toFixed(2) + ' ₺';
+            document.getElementById('profitSummary').textContent = toplamKarZarar.toFixed(2) + ' ₺';
+        }
+        
+        // Stok listesini tabloya yazdır
+        function tabloGuncelle() {
+            const tbody = document.querySelector('#stokTablosu tbody');
+            const cardView = document.getElementById('card-view');
+            
+            tbody.innerHTML = '';
+            cardView.innerHTML = '';
+            
+            // Sıralama yap
+            const sortedProducts = Object.entries(stokListesi);
+            
+            if (currentSort.column) {
+                sortedProducts.sort((a, b) => {
+                    let valueA, valueB;
+                    
+                    valueA = a[1][currentSort.column];
+                    valueB = b[1][currentSort.column];
+                    
+                    // Null/undefined değerleri için varsayılan değerler
+                    if (valueA === null || valueA === undefined) valueA = '';
+                    if (valueB === null || valueB === undefined) valueB = '';
+                    
+                    // Sayısal sıralama için dönüşüm
+                    if (currentSort.column === 'miktar' || currentSort.column === 'alisFiyati') {
+                        valueA = parseFloat(valueA) || 0;
+                        valueB = parseFloat(valueB) || 0;
+                    } else if (typeof valueA === 'string') {
+                        valueA = valueA.toLowerCase();
+                        valueB = valueB ? valueB.toLowerCase() : '';
+                    }
+                    
+                    if (valueA < valueB) return currentSort.direction === 'asc' ? -1 : 1;
+                    if (valueA > valueB) return currentSort.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            
+            let productFound = false;
+            
+            for (const [productId, urun] of sortedProducts) {
+                // Stok sıfır ise özel class ekle
+                const stockZeroClass = urun.miktar === 0 ? 'stock-zero' : '';
+                const barkod = urun.barkod || productId; // Geriye uyumluluk için
+                
+                // Tablo satırı oluştur
+                const tr = document.createElement('tr');
+                if (stockZeroClass) tr.classList.add(stockZeroClass);
+                
+                tr.innerHTML = `
+                    <td class="barcode-cell tooltip">${barkod}
+                        <span class="tooltiptext">Sağ tıklayarak arama yapabilirsiniz</span>
+                    </td>
+                    <td class="product-name-cell tooltip" title="${urun.aciklama || ''} | Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}">${urun.ad}</td>
+                    <td>${urun.marka || '-'}</td>
+                    <td>${urun.miktar}${urun.miktar === 0 ? ' <span class="stock-zero-badge">STOK BİTTİ</span>' : ''}</td>
+                    <td>${urun.alisFiyati ? urun.alisFiyati.toFixed(2) : '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${productId}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
+                                <i class="fas fa-cash-register"></i>
+                            </button>
+                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${productId}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${productId}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+                
+                // Kart görünümü oluştur
+                const card = document.createElement('div');
+                card.className = `product-card ${stockZeroClass}`;
+                
+                card.innerHTML = `
+                    <div class="product-header">
+                        <h3 class="tooltip">${urun.ad} 
+                            <span class="tooltiptext">${urun.aciklama || 'Açıklama yok'}<br>Eklenme: ${new Date(urun.eklenmeTarihi || Date.now()).toLocaleDateString('tr-TR')}</span>
+                        </h3>
+                        <p>${barkod}</p>
+                        ${urun.marka ? `<p style="font-size: 12px; color: #888;">${urun.marka}</p>` : ''}
+                    </div>
+                    <div class="product-body">
+                        <div class="product-info">
+                            <p><strong>Marka:</strong> ${urun.marka || '-'}</p>
+                            <p><strong>Stok:</strong> ${urun.miktar}${urun.miktar === 0 ? ' <span class="stock-zero-badge">STOK BİTTİ</span>' : ''}</p>
+                            <p><strong>Alış Fiyatı:</strong> ${urun.alisFiyati ? urun.alisFiyati.toFixed(2) : '-'} ₺</p>
+                        </div>
+                    </div>
+                    <div class="product-footer">
+                        <div class="action-buttons">
+                            <button class="action-btn btn-sell" title="Sat" onclick="urunSat('${productId}')" ${urun.miktar === 0 ? 'disabled style="opacity:0.5;"' : ''}>
+                                <i class="fas fa-cash-register"></i>
+                            </button>
+                            <button class="action-btn btn-edit" title="Düzenle" onclick="urunDuzenle('${productId}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn btn-delete" title="Sil" onclick="urunSil('${productId}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                cardView.appendChild(card);
+                productFound = true;
+            }
+            
+            // Ürün bulunamadıysa mesaj göster
+            const noProductMessage = document.getElementById('noProductMessage');
+            if (!productFound) {
+                noProductMessage.style.display = 'block';
+            } else {
+                noProductMessage.style.display = 'none';
+            }
+            
+            // Context menu için olay dinleyicileri ekle
+            addBarcodeContextMenu();
+            
+            istatistikleriGuncelle();
+        }
+        
+        // Barkod hücrelerine context menu ekle
+        function addBarcodeContextMenu() {
+            const barcodeCells = document.querySelectorAll('.barcode-cell');
+            const contextMenu = document.getElementById('contextMenu');
+            const atilganOption = document.getElementById('contextBarcodeSearchAtilgan');
+            const prensotoOption = document.getElementById('contextBarcodeSearchPrensoto');
+            const detailsOption = document.getElementById('contextProductDetails');
+            
+            barcodeCells.forEach(cell => {
+                cell.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    const barkod = this.textContent.trim();
+                    
+                    // Context menu'yu konumlandır
+                    contextMenu.style.display = 'block';
+                    contextMenu.style.left = e.pageX + 'px';
+                    contextMenu.style.top = e.pageY + 'px';
+                    
+                    // Olayları ayarla
+                    atilganOption.onclick = function() {
+                        window.open(`https://www.atilgan.online/View/UrunListe?search=${barkod}`, '_blank');
+                        contextMenu.style.display = 'none';
+                    };
+                    
+                    prensotoOption.onclick = function() {
+                        window.open(`https://b2b.prensoto.com/Search.aspx?ctl00$MainContent$txtSearch=${barkod}`, '_blank');
+                        contextMenu.style.display = 'none';
+                    };
+                    
+                    detailsOption.onclick = function() {
+                        showProductDetails(barkod);
+                        contextMenu.style.display = 'none';
+                    };
+                });
+            });
+        }
+        
+        // Ürün detaylarını göster
+        function showProductDetails(barkod) {
+            let productId = null;
+            let product = null;
+            
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    productId = id;
+                    product = urun;
+                    break;
+                }
+            }
+            
+            if (product) {
+                document.getElementById('detail-barkod').value = barkod;
+                document.getElementById('detail-urunAdi').value = product.ad;
+                document.getElementById('detail-marka').value = product.marka || '';
+                document.getElementById('detail-aciklama').value = product.aciklama || '';
+                document.getElementById('detail-miktar').value = product.miktar;
+                document.getElementById('detail-alisFiyati').value = product.alisFiyati || '';
+                document.getElementById('detail-eklenmeTarihi').value = product.eklenmeTarihi ? 
+                    new Date(product.eklenmeTarihi).toLocaleString('tr-TR') : '';
+                
+                document.getElementById('productDetailsModal').style.display = 'flex';
+            }
+        }
+        
+        // Satış geçmişini güncelle
+        function satisGecmisiGuncelle() {
+            const salesBody = document.getElementById('salesBody');
+            salesBody.innerHTML = '';
+            
+            if (satisGecmisi && satisGecmisi.length > 0) {
+                satisGecmisi.forEach(satis => {
+                    const tr = document.createElement('tr');
+                    const tarih = new Date(satis.tarih);
+                    const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()} ${tarih.getHours().toString().padStart(2, '0')}:${tarih.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    // Müşteri adını bul
+                    let musteriAdi = '-';
+                    if (satis.musteriId && musteriler[satis.musteriId]) {
+                        musteriAdi = musteriler[satis.musteriId].ad;
+                    }
+                    
+                    // Güncel ürün adını bul (eğer ürün hala mevcutsa)
+                    let currentProductName = satis.urunAdi; // Varsayılan olarak satış kaydındaki ad
+                    let barkodGoster = '-';
+                    // Barkodun gösterimi: stokta karşılığı varsa onun barkodunu göster, yoksa satış kaydındaki barkodu göster
+                    const productEntry = Object.entries(stokListesi).find(([id, urun]) => (urun.barkod || id) === satis.barkod);
+                    if (productEntry) {
+                        const [id, urun] = productEntry;
+                        barkodGoster = urun.barkod || id;
+                        currentProductName = urun.ad;
+                    } else if (satis.barkod && satis.barkod.length > 0) {
+                        barkodGoster = satis.barkod;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td>${tarihStr}</td>
+                        <td>${barkodGoster}</td>
+                        <td title="Orijinal: ${satis.urunAdi}">${currentProductName}</td>
+                        <td>${satis.miktar}</td>
+                        <td>${satis.alisFiyati ? satis.alisFiyati.toFixed(2) : '-'}</td>
+                        <td>${satis.fiyat.toFixed(2)}</td>
+                        <td>${satis.borc ? '<span class="credit-indicator">Borç</span>' : 'Nakit'}</td>
+                        <td>${musteriAdi}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn btn-return" title="İade" onclick="urunIade('${satis.id}')">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="action-btn btn-edit" title="Düzenle" onclick="satisDuzenle('${satis.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn btn-delete" title="Sil" onclick="satisSil('${satis.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    salesBody.appendChild(tr);
+                });
+            }
+            
+            updateSalesSummary(satisGecmisi);
+        }
+        
+        // Müşteri tablosunu güncelle
+        function musteriTablosuGuncelle() {
+            const musteriBody = document.getElementById('musteriBody');
+            musteriBody.innerHTML = '';
+            
+            // Müşterileri sırala
+            const sortedCustomers = Object.entries(musteriler);
+            
+            if (currentCustomerSort.column) {
+                sortedCustomers.sort((a, b) => {
+                    let valueA, valueB;
+                    
+                    valueA = a[1][currentCustomerSort.column] || '';
+                    valueB = b[1][currentCustomerSort.column] || '';
+                    
+                    if (typeof valueA === 'string') {
+                        valueA = valueA.toLowerCase();
+                        valueB = valueB.toLowerCase();
+                    }
+                    
+                    if (valueA < valueB) return currentCustomerSort.direction === 'asc' ? -1 : 1;
+                    if (valueA > valueB) return currentCustomerSort.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            
+            for (const [id, musteri] of sortedCustomers) {
+                // Müşterinin toplam borcunu hesapla
+                let toplamBorc = 0;
+                
+                if (satisGecmisi && satisGecmisi.length > 0) {
+                    satisGecmisi.forEach(satis => {
+                        if (satis.musteriId === id && satis.borc) {
+                            toplamBorc += satis.toplam;
+                        }
+                    });
+                }
+                
+                // Müşterinin satın aldığı ürünleri listele
+                let satinAlinanUrunler = [];
+                
+                if (satisGecmisi && satisGecmisi.length > 0) {
+                    satisGecmisi.forEach(satis => {
+                        if (satis.musteriId === id) {
+                            satinAlinanUrunler.push(`${satis.urunAdi} (${satis.miktar} adet)`);
+                        }
+                    });
+                }
+                
+                // Sadece ilk 3 ürünü göster
+                let urunListesi = satinAlinanUrunler.slice(0, 3).join(', ');
+                if (satinAlinanUrunler.length > 3) {
+                    urunListesi += ` +${satinAlinanUrunler.length - 3} daha`;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td onclick="showCustomerDetails('${id}')" style="cursor: pointer; color: var(--primary); font-weight: 500;">${musteri.ad}</td>
+                    <td>${musteri.telefon || '-'}</td>
+                    <td>${toplamBorc.toFixed(2)}</td>
+                    <td>${urunListesi || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-success" title="Satış Ekle" onclick="musteriyeSatisEkle('${id}')">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="action-btn btn-info" title="Satış Geçmişi" onclick="showCustomerSales('${id}')">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            <button class="action-btn btn-edit" title="Düzenle" onclick="musteriDuzenle('${id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn btn-delete" title="Sil" onclick="musteriSil('${id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                musteriBody.appendChild(tr);
+            }
+        }
+        
+        // Müşteri ekle
+        function musteriEkle() {
+            const ad = document.getElementById('musteriAdi').value.trim();
+            const telefon = document.getElementById('musteriTelefon').value.trim();
+            const adres = document.getElementById('musteriAdres').value.trim();
+            const aciklama = document.getElementById('musteriAciklama').value.trim();
+            
+            if (!ad) {
+                Swal.fire('Hata', 'Müşteri adı zorunludur.', 'error');
+                return;
+            }
+            
+            let id;
+            const isEditing = editingMode && editingMusteriId;
+            
+            if (isEditing) {
+                id = editingMusteriId;
+            } else {
+                id = 'musteri_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+            }
+            
+            musteriler[id] = {
+                ad,
+                telefon: telefon || null,
+                adres: adres || null,
+                aciklama: aciklama || null
+            };
+            
+            saveData();
+            musteriTablosuGuncelle();
+            musteriFormTemizle();
+            editingMode = false;
+            editingMusteriId = null;
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Başarılı',
+                text: isEditing ? 'Müşteri güncellendi.' : 'Müşteri eklendi.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+        
+        // Müşteri formunu temizle
+        function musteriFormTemizle() {
+            document.getElementById('musteriAdi').value = '';
+            document.getElementById('musteriTelefon').value = '';
+            document.getElementById('musteriAdres').value = '';
+            document.getElementById('musteriAciklama').value = '';
+            
+            // Düzenleme modunu sıfırla
+            editingMode = false;
+            editingMusteriId = null;
+            
+            // Buton metinlerini güncelle
+            document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-save"></i> Kaydet';
+            document.getElementById('musteriIptalBtn').style.display = 'none';
+        }
+        
+        // Müşteri düzenlemeyi iptal et
+        function musteriDuzenlemeIptal() {
+            musteriFormTemizle();
+            Swal.fire({
+                icon: 'info',
+                title: 'İptal Edildi',
+                text: 'Düzenleme işlemi iptal edildi.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+        
+        // Ürün satış fonksiyonu
+        function urunSat(barkod) {
+            if (!stokListesi[barkod]) return;
+            
+            if (stokListesi[barkod].miktar <= 0) {
+                Swal.fire('Uyarı', 'Bu ürünün stokta yeterli miktarı yok.', 'warning');
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Satışı onayla',
+                html: `
+                    <b>${stokListesi[barkod].ad}</b> ürününü satmak istediğinize emin misiniz?
+                    <div style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="satisMiktari">Satış Miktarı</label>
+                            <input type="number" id="satisMiktari" class="form-control" min="1" max="${stokListesi[barkod].miktar}" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="satisFiyati">Satış Fiyatı (₺)</label>
+                            <input type="number" id="satisFiyati" class="form-control" min="0" step="0.01" placeholder="Boş bırakabilirsiniz">
+                            <small style="color: #666;">Fiyat belirtmezseniz varsayılan fiyat kullanılır</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="nakitMiktari">Nakit Satış Miktarı</label>
+                            <input type="number" id="nakitMiktari" class="form-control" min="0" max="${stokListesi[barkod].miktar}" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="borcMiktari">Borç Satış Miktarı</label>
+                            <input type="number" id="borcMiktari" class="form-control" min="0" max="${stokListesi[barkod].miktar}" value="0">
+                        </div>
+                        <div id="customer-selection" style="margin-top: 10px;">
+                            <label>Müşteri Seçin</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="sale-customer" class="form-control" style="flex:1;">
+                                    <option value="">Müşteri seçin</option>
+                                </select>
+                                <button type="button" class="btn btn-outline" onclick="openNewCustomerModal('sale-customer')">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sat',
+                cancelButtonText: 'İptal',
+                confirmButtonColor: '#27ae60',
+                cancelButtonColor: '#6c757d',
+                didOpen: () => {
+                    const saleCustomer = document.getElementById('sale-customer');
+                    
+                    // Müşteri seçeneklerini doldur
+                    saleCustomer.innerHTML = '<option value="">Müşteri seçin</option>';
+                    
+                    for (const [id, musteri] of Object.entries(musteriler)) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = musteri.ad;
+                        saleCustomer.appendChild(option);
+                    }
+                    
+                    // Miktar değişimlerini kontrol et
+                    document.getElementById('satisMiktari').addEventListener('change', function() {
+                        const total = parseInt(this.value) || 0;
+                        document.getElementById('nakitMiktari').max = total;
+                        document.getElementById('borcMiktari').max = total;
+                        
+                        if (parseInt(document.getElementById('nakitMiktari').value) > total) {
+                            document.getElementById('nakitMiktari').value = total;
+                        }
+                    });
+                    
+                    document.getElementById('nakitMiktari').addEventListener('change', function() {
+                        const cash = parseInt(this.value) || 0;
+                        const total = parseInt(document.getElementById('satisMiktari').value) || 0;
+                        document.getElementById('borcMiktari').value = total - cash;
+                    });
+                    
+                    document.getElementById('borcMiktari').addEventListener('change', function() {
+                        const credit = parseInt(this.value) || 0;
+                        const total = parseInt(document.getElementById('satisMiktari').value) || 0;
+                        document.getElementById('nakitMiktari').value = total - credit;
+                    });
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    const satisMiktari = parseInt(document.getElementById('satisMiktari').value) || 1;
+                    const nakitMiktari = parseInt(document.getElementById('nakitMiktari').value) || 0;
+                    const borcMiktari = parseInt(document.getElementById('borcMiktari').value) || 0;
+                    let satisFiyati = parseFloat(document.getElementById('satisFiyati').value);
+                    const customerId = document.getElementById('sale-customer').value || null;
+                    
+                    // Miktar kontrolü
+                    if (satisMiktari <= 0) {
+                        Swal.fire('Hata', 'Satış miktarı 1 veya daha büyük olmalıdır.', 'error');
+                        return;
+                    }
+                    
+                    if (nakitMiktari + borcMiktari !== satisMiktari) {
+                        Swal.fire('Hata', 'Nakit ve borç miktarlarının toplamı satış miktarına eşit olmalıdır.', 'error');
+                        return;
+                    }
+                    
+                    // Fiyat belirtilmemişse varsayılan fiyat kullan
+                    if (isNaN(satisFiyati) || satisFiyati <= 0) {
+                        satisFiyati = stokListesi[barkod].alisFiyati || 0;
+                    }
+                    
+                    // Nakit satış yap
+                    if (nakitMiktari > 0) {
+                        tamamlaSatis(barkod, nakitMiktari, customerId, null, satisFiyati, false);
+                    }
+                    
+                    // Borç satış yap
+                    if (borcMiktari > 0) {
+                        if (!customerId) {
+                            Swal.fire('Hata', 'Borç satış için müşteri seçmelisiniz.', 'error');
+                            return;
+                        }
+                        tamamlaSatis(barkod, borcMiktari, customerId, null, satisFiyati, true);
+                    }
+                }
+            });
+        }
+        
+        // Satışı tamamla
+        function tamamlaSatis(barkod, miktar, musteriId, aciklama, satisFiyati, isCredit = false) {
+            const urun = stokListesi[barkod];
+            urun.miktar -= miktar;
+            
+            // Satış geçmişine ekle
+            const satis = {
+                id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
+                tarih: new Date().toISOString(),
+                barkod: urun.barkod,
+                urunAdi: urun.ad,
+                marka: urun.marka || '',
+                miktar: miktar,
+                fiyat: satisFiyati,
+                alisFiyati: urun.alisFiyati || 0,
+                toplam: satisFiyati * miktar,
+                borc: isCredit,
+                musteriId: musteriId,
+                aciklama: aciklama
+            };
+            
+            satisGecmisi.push(satis);
+            saveData();
+            
+            if (urun.miktar === 0) {
+                Swal.fire('Bilgi', 'Bu ürünün stoğu tükendi.', 'info');
+            }
+            
+            tabloGuncelle();
+            satisGecmisiGuncelle();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Satış Tamamlandı!',
+                text: `Ürün ${isCredit ? 'borç' : 'nakit'} olarak satıldı.`,
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+        
+        // Ürün iade
+        function urunIade(satisId) {
+            const satisIndex = satisGecmisi.findIndex(s => s.id === satisId);
+            if (satisIndex === -1) return;
+            
+            const satis = satisGecmisi[satisIndex];
+            
+            Swal.fire({
+                title: 'İadeyi onayla',
+                html: `<b>${satis.urunAdi}</b> ürününü iade etmek istediğinize emin misiniz?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, İade Et',
+                cancelButtonText: 'İptal',
+                confirmButtonColor: '#27ae60',
+                cancelButtonColor: '#6c757d'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    // Stokta ürün varsa miktarını artır, yoksa yeni ekle
+                    if (stokListesi[satis.barkod]) {
+                        stokListesi[satis.barkod].miktar += satis.miktar;
+                    } else {
+                        stokListesi[satis.barkod] = {
+                            ad: satis.urunAdi,
+                            marka: satis.marka || '',
+                            miktar: satis.miktar,
+                            alisFiyati: satis.alisFiyati || 0,
+                            eklenmeTarihi: new Date().toISOString()
+                        };
+                    }
+                    
+                    // Satışı geçmişten sil
+                    satisGecmisi.splice(satisIndex, 1);
+                    saveData();
+                    
+                    tabloGuncelle();
+                    satisGecmisiGuncelle();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'İade Tamamlandı!',
+                        text: 'Ürün stoklara geri eklendi.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            });
+        }
+        
+        // Satış sil
+        function satisSil(satisId) {
+            const satisIndex = satisGecmisi.findIndex(s => s.id === satisId);
+            if (satisIndex === -1) return;
+            
+            Swal.fire({
+                title: 'Satışı silmek istiyor musunuz?',
+                text: "Bu işlem geri alınamaz!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, sil!',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    satisGecmisi.splice(satisIndex, 1);
+                    saveData();
+                    satisGecmisiGuncelle();
+                    Swal.fire('Silindi!', 'Satış başarıyla silindi.', 'success');
+                }
+            });
+        }
+        
+        // Kar/zarar raporunu göster
+        function showProfitLoss() {
+            const profitLossBody = document.getElementById('profitLossBody');
+            profitLossBody.innerHTML = '';
+            
+            // Ürün bazında kar/zarar hesapla
+            const urunKarZarar = {};
+            
+            if (satisGecmisi && satisGecmisi.length > 0) {
+                satisGecmisi.forEach(satis => {
+                    if (satis.alisFiyati !== undefined && satis.fiyat !== undefined) {
+                        const karZarar = (satis.fiyat - satis.alisFiyati) * satis.miktar;
+                        
+                        if (!urunKarZarar[satis.barkod]) {
+                            urunKarZarar[satis.barkod] = {
+                                urunAdi: satis.urunAdi,
+                                alisFiyati: satis.alisFiyati,
+                                satisFiyati: satis.fiyat,
+                                miktar: satis.miktar,
+                                karZarar: karZarar
+                            };
+                        } else {
+                            urunKarZarar[satis.barkod].miktar += satis.miktar;
+                            urunKarZarar[satis.barkod].karZarar += karZarar;
+                        }
+                    }
+                });
+            }
+            
+            let toplamKarZarar = 0;
+            
+            // Tabloya ekle
+            for (const [barkod, data] of Object.entries(urunKarZarar)) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.urunAdi}</td>
+                    <td>${data.alisFiyati.toFixed(2)}</td>
+                    <td>${data.satisFiyati.toFixed(2)}</td>
+                    <td>${data.miktar}</td>
+                    <td class="${data.karZarar >= 0 ? 'profit' : 'loss'}">${data.karZarar.toFixed(2)}</td>
+                `;
+                
+                profitLossBody.appendChild(tr);
+                toplamKarZarar += data.karZarar;
+            }
+            
+            document.getElementById('totalProfitLoss').textContent = toplamKarZarar.toFixed(2) + ' ₺';
+            document.getElementById('profitLossModal').style.display = 'flex';
+        }
+        
+        // Bilgisayara yedekle
+        function yedekleBilgisayara() {
+            // Tüm verileri topla
+            const backupData = {
+                stokListesi: stokListesi,
+                satisGecmisi: satisGecmisi,
+                musteriler: musteriler,
+                tarih: new Date().toISOString()
+            };
+            
+            // JSON string'e çevir
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            // İndirme linki oluştur
+            const exportFileDefaultName = `sabancioglu_otomotiv_yedek_${new Date().toISOString().split('T')[0]}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Yedekleme Tamamlandı!',
+                html: `Dosya <strong>${exportFileDefaultName}</strong> olarak bilgisayarınıza indirildi.`,
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+        
+        // Masaüstü uygulaması gibi tam ekran modu
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Tam ekran hatası: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        // Modal kapatma
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        // Müşteri düzenle
+        function musteriDuzenle(id) {
+            const musteri = musteriler[id];
+            if (!musteri) {
+                Swal.fire('Hata', 'Müşteri bulunamadı.', 'error');
+                return;
+            }
+            
+            document.getElementById('musteriAdi').value = musteri.ad;
+            document.getElementById('musteriTelefon').value = musteri.telefon || '';
+            document.getElementById('musteriAdres').value = musteri.adres || '';
+            document.getElementById('musteriAciklama').value = musteri.aciklama || '';
+            
+            editingMode = true;
+            editingMusteriId = id;
+            
+            // Buton metinlerini güncelle
+            document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-edit"></i> Güncelle';
+            document.getElementById('musteriIptalBtn').style.display = 'inline-block';
+            
+            // Müşteri panelini aç
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[data-tab="customers"]').classList.add('active');
+            document.getElementById('stock-panel').style.display = 'none';
+            document.getElementById('sales-panel').style.display = 'none';
+            document.getElementById('customers-panel').style.display = 'block';
+            
+            // Form alanına odaklan
+            document.getElementById('musteriAdi').focus();
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Düzenleme Modu',
+                text: `${musteri.ad} müşterisi düzenleniyor.`,
+                showConfirmButton: false,
+                timer: 2000
+            });
+        }
+        
+        // Müşteri sil
+        function musteriSil(id) {
+            Swal.fire({
+                title: 'Müşteriyi silmek istiyor musunuz?',
+                text: "Bu işlem geri alınamaz!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, sil!',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    delete musteriler[id];
+                    saveData();
+                    musteriTablosuGuncelle();
+                    Swal.fire('Silindi!', 'Müşteri başarıyla silindi.', 'success');
+                }
+            });
+        }
+        
+        // Ürün düzenle
+        function urunDuzenle(productId) {
+            const urun = stokListesi[productId];
+            document.getElementById('barkod').value = urun.barkod;
+            document.getElementById('urunAdi').value = urun.ad;
+            document.getElementById('marka').value = urun.marka || '';
+            document.getElementById('aciklama').value = urun.aciklama || '';
+            document.getElementById('miktar').value = urun.miktar;
+            document.getElementById('alisFiyati').value = urun.alisFiyati || '';
+            
+            // Düzenlenen ürün ID'sini kaydet
+            editingProductId = productId;
+            
+            // Sayfayı formun olduğu kısma kaydır
+            document.getElementById('barkod').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Benzersiz ürün ID oluştur
+        function generateProductId() {
+            return 'urun_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+        }
+        
+        // Aynı barkod ve isme sahip ürünleri kontrol et
+        function findSimilarProducts(barkod, ad) {
+            const similar = [];
+            
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod && urun.ad === ad) {
+                    similar.push({ id, ...urun });
+                }
+            }
+            
+            return similar;
+        }
+        
+        // Ürün ekle / güncelle fonksiyonu
+        function urunEkle() {
+            const barkod = document.getElementById('barkod').value.trim();
+            const ad = document.getElementById('urunAdi').value.trim();
+            const marka = document.getElementById('marka').value.trim();
+            let aciklama = document.getElementById('aciklama').value.trim();
+            const miktar = Number(document.getElementById('miktar').value) || 0;
+            const alisFiyati = Number(document.getElementById('alisFiyati').value) || null;
+            
+            if (!barkod || !ad) {
+                Swal.fire('Hata', 'Barkod ve ürün adı zorunludur.', 'error');
+                return;
+            }
+            
+            if (editingProductId && stokListesi[editingProductId]) {
+                // Düzenleme modunda mevcut ürünü güncelle
+                stokListesi[editingProductId] = {
+                    barkod,
+                    ad,
+                    marka: marka || null,
+                    aciklama: aciklama || null,
+                    miktar,
+                    alisFiyati,
+                    eklenmeTarihi: stokListesi[editingProductId].eklenmeTarihi,
+                    guncellemeTarihi: new Date().toISOString()
+                };
+                Swal.fire('Başarılı!', 'Ürün güncellendi.', 'success');
+                editingProductId = null;
+            } else {
+                // Tüm özelliklere göre karşılaştırma
+                let existingId = null;
+                for (const [id, urun] of Object.entries(stokListesi)) {
+                    if (
+                        urun.barkod === barkod && 
+                        urun.ad === ad && 
+                        (urun.marka || '') === marka && 
+                        (urun.aciklama || '') === aciklama && 
+                        Number(urun.alisFiyati) === Number(alisFiyati)
+                    ) {
+                        existingId = id;
+                        break;
+                    }
+                }
+                if (existingId) {
+                    // Güncelle
+                    stokListesi[existingId] = {
+                        barkod,
+                        ad,
+                        marka: marka || null,
+                        aciklama: aciklama || null,
+                        miktar,
+                        alisFiyati,
+                        eklenmeTarihi: stokListesi[existingId].eklenmeTarihi,
+                        guncellemeTarihi: new Date().toISOString()
+                    };
+                    Swal.fire('Başarılı!', 'Ürün güncellendi.', 'success');
+                } else {
+                    // Yeni ürün ekle
+                    const productId = generateProductId();
+                    stokListesi[productId] = {
+                        barkod,
+                        ad,
+                        marka: marka || null,
+                        aciklama: aciklama || null,
+                        miktar,
+                        alisFiyati,
+                        eklenmeTarihi: new Date().toISOString()
+                    };
+                    Swal.fire('Başarılı!', 'Ürün eklendi.', 'success');
+                }
+            }
+            saveData();
+            tabloGuncelle();
+            formTemizle();
+        }
+        
+        // Ürün silme fonksiyonu
+        function urunSil(productId) {
+            if (!stokListesi[productId]) return;
+            
+            Swal.fire({
+                title: 'Silmeyi onayla',
+                html: `<b>${stokListesi[productId].ad}</b> ürününü silmek istediğinize emin misiniz?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'İptal',
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#6c757d'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    delete stokListesi[productId];
+                    saveData();
+                    tabloGuncelle();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Ürün Silindi!',
+                        text: 'Ürün başarıyla silindi.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            });
+        }
+        
+        // Formu temizle
+        function formTemizle() {
+            document.getElementById('barkod').value = '';
+            document.getElementById('urunAdi').value = '';
+            document.getElementById('marka').value = '';
+            document.getElementById('aciklama').value = '';
+            document.getElementById('miktar').value = '0';
+            document.getElementById('alisFiyati').value = '';
+            
+            editingProductId = null;
+        }
+        
+        // Düşük stoklu ürünleri göster
+        function showLowStockProducts() {
+            const lowStockBody = document.getElementById('lowStockBody');
+            lowStockBody.innerHTML = '';
+            
+            let hasLowStock = false;
+            
+            for (const [barkod, urun] of Object.entries(stokListesi)) {
+                if (urun.miktar === 1) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${barkod || '-'}</td>
+                        <td>${urun.ad}</td>
+                        <td>${urun.marka || '-'}</td>
+                        <td>${urun.miktar}</td>
+                    `;
+                    
+                    lowStockBody.appendChild(tr);
+                    hasLowStock = true;
+                }
+            }
+            
+            if (hasLowStock) {
+                document.getElementById('lowStockModal').style.display = 'flex';
+            } else {
+                Swal.fire('Bilgi', 'Düşük stoklu ürün bulunmamaktadır.', 'info');
+            }
+        }
+        
+        // Görünüm değiştirme
+        function toggleView(view) {
+            const tableView = document.getElementById('table-view');
+            const cardView = document.getElementById('card-view');
+            const tableViewBtn = document.getElementById('tableView');
+            const cardViewBtn = document.getElementById('cardView');
+            
+            if (view === 'table') {
+                tableView.style.display = 'block';
+                cardView.style.display = 'none';
+                tableViewBtn.classList.add('active');
+                cardViewBtn.classList.remove('active');
+                currentView = 'table';
+            } else {
+                tableView.style.display = 'none';
+                cardView.style.display = 'grid';
+                tableViewBtn.classList.remove('active');
+                cardViewBtn.classList.add('active');
+                currentView = 'card';
+            }
+        }
+        
+        // Arama yap
+        function aramaYap() {
+            const aramaMetni = document.getElementById('searchInput').value.toLowerCase().replace(/\s+/g, '');
+            const rows = document.querySelectorAll('#stokTablosu tbody tr');
+            const cards = document.querySelectorAll('#card-view .product-card');
+            const noProductMessage = document.getElementById('noProductMessage');
+            
+            let productFound = false;
+            
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase().replace(/\s+/g, '');
+                if (rowText.includes(aramaMetni)) {
+                    row.style.display = '';
+                    productFound = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            cards.forEach(card => {
+                const cardText = card.textContent.toLowerCase().replace(/\s+/g, '');
+                if (cardText.includes(aramaMetni)) {
+                    card.style.display = '';
+                    productFound = true;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Ürün bulunamadıysa mesaj göster
+            if (!productFound && aramaMetni.length > 0) {
+                noProductMessage.style.display = 'block';
+            } else {
+                noProductMessage.style.display = 'none';
+            }
+        }
+        
+        // Yeni ürün ekleme teklifi
+        function yeniUrunEkle() {
+            const searchInput = document.getElementById('searchInput');
+            document.getElementById('urunAdi').value = searchInput.value;
+            searchInput.value = '';
+            document.getElementById('noProductMessage').style.display = 'none';
+            document.getElementById('barkod').focus();
+        }
+        
+        // Satış geçmişini filtrele
+        function filterSales(period) {
+            const now = new Date();
+            const salesBody = document.getElementById('salesBody');
+            salesBody.innerHTML = '';
+            
+            let filteredSales = satisGecmisi;
+            
+            if (period !== 'all') {
+                filteredSales = satisGecmisi.filter(satis => {
+                    const saleDate = new Date(satis.tarih);
+                    
+                    if (period === 'daily') {
+                        return saleDate.getDate() === now.getDate() && 
+                               saleDate.getMonth() === now.getMonth() && 
+                               saleDate.getFullYear() === now.getFullYear();
+                    } else if (period === 'weekly') {
+                        const oneWeekAgo = new Date();
+                        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                        return saleDate > oneWeekAgo;
+                    } else if (period === 'monthly') {
+                        return saleDate.getMonth() === now.getMonth() && 
+                               saleDate.getFullYear() === now.getFullYear();
+                    } else if (period === 'yearly') {
+                        return saleDate.getFullYear() === now.getFullYear();
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            if (filteredSales && filteredSales.length > 0) {
+                filteredSales.forEach(satis => {
+                    const tr = document.createElement('tr');
+                    const tarih = new Date(satis.tarih);
+                    const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()} ${tarih.getHours().toString().padStart(2, '0')}:${tarih.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    // Müşteri adını bul
+                    let musteriAdi = '-';
+                    if (satis.musteriId && musteriler[satis.musteriId]) {
+                        musteriAdi = musteriler[satis.musteriId].ad;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td>${tarihStr}</td>
+                        <td>${satis.barkod}</td>
+                        <td>${satis.urunAdi}</td>
+                        <td>${satis.miktar}</td>
+                        <td>${satis.alisFiyati ? satis.alisFiyati.toFixed(2) : '-'}</td>
+                        <td>${satis.fiyat.toFixed(2)}</td>
+                        <td>${satis.borc ? '<span class="credit-indicator">Borç</span>' : 'Nakit'}</td>
+                        <td>${musteriAdi}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn btn-return" title="İade" onclick="urunIade('${satis.id}')">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="action-btn btn-edit" title="Düzenle" onclick="satisDuzenle('${satis.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn btn-delete" title="Sil" onclick="satisSil('${satis.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    salesBody.appendChild(tr);
+                });
+            }
+            
+            updateSalesSummary(filteredSales);
+        }
+        
+        // Barkod basma fonksiyonu
+        function barkodBas(barkod) {
+            if (!barkod) {
+                Swal.fire('Hata', 'Barkod değeri girilmemiş!', 'error');
+                return;
+            }
+            
+            // Find the product by barcode
+            let urunAdi = '';
+            let marka = '';
+            for (const [id, urun] of Object.entries(stokListesi)) {
+                if (urun.barkod === barkod) {
+                    urunAdi = urun.ad || '';
+                    marka = urun.marka || '';
+                    break;
+                }
+            }
+            
+            // Set the product info in the modal
+            document.getElementById('barcode-product-name').textContent = urunAdi;
+            document.getElementById('barcode-brand').textContent = marka;
+            
+            // Clear previous barcode
+            document.getElementById('barcode').innerHTML = '';
+            
+            // Generate the barcode
+            try {
+                JsBarcode("#barcode", barkod, {
+                    format: "CODE128",
+                    displayValue: true,
+                    fontSize: 16,
+                    height: 40,
+                    margin: 10
+                });
+            } catch (e) {
+                console.error("Barkod oluşturma hatası:", e);
+                Swal.fire('Hata', 'Barkod oluşturulamadı!', 'error');
+                return;
+            }
+            
+            // Show the modal
+            document.getElementById('barcodeModal').style.display = 'flex';
+        }
+        
+        // Barkod yazdırma
+        function printBarcode() {
+            try {
+                const barcodeContainer = document.querySelector('.barcode-container');
+                if (!barcodeContainer) {
+                    Swal.fire('Hata', 'Barkod önizlemesi bulunamadı!', 'error');
+                    return;
+                }
+                
+                const barcodeContent = barcodeContainer.innerHTML;
+                const printWindow = window.open('', '_blank');
+                
+                if (!printWindow) {
+                    Swal.fire('Hata', 'Yazdırma penceresi açılamadı! Tarayıcı popup engelliyor olabilir.', 'error');
+                    return;
+                }
+                
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Barkod Yazdır</title>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                margin: 0;
+                                text-align: center;
+                                background: white;
+                            }
+                            .barcode-text h3 {
+                                margin: 10px 0;
+                                font-size: 18px;
+                                color: black;
+                            }
+                            .barcode-text p {
+                                margin: 5px 0;
+                                font-size: 14px;
+                                color: black;
+                            }
+                            svg {
+                                margin: 10px 0;
+                                display: block;
+                                margin-left: auto;
+                                margin-right: auto;
+                            }
+                            .barcode-actions {
+                                display: none !important;
+                            }
+                            @media print {
+                                body {
+                                    margin: 0;
+                                    padding: 10px;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${barcodeContent}
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                window.close();
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            } catch (error) {
+                console.error('Yazdırma hatası:', error);
+                Swal.fire('Hata', 'Barkod yazdırılırken bir hata oluştu!', 'error');
+            }
+        }
+        
+        // Müşteri panelini aç
+        function openCustomerPanel() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[data-tab="customers"]').classList.add('active');
+            document.getElementById('stock-panel').style.display = 'none';
+            document.getElementById('sales-panel').style.display = 'none';
+            document.getElementById('customers-panel').style.display = 'block';
+            document.getElementById('creditSaleModal').style.display = 'none';
+        }
+        
+        // Müşteri satış geçmişini göster
+        function showCustomerSales(musteriId) {
+            const musteri = musteriler[musteriId];
+            if (!musteri) return;
+            
+            document.getElementById('customerSalesTitle').textContent = `${musteri.ad} Satış Geçmişi`;
+            
+            const customerSalesBody = document.getElementById('customerSalesBody');
+            customerSalesBody.innerHTML = '';
+            
+            // Müşteriye ait satışları filtrele
+            const musteriSatislari = satisGecmisi.filter(satis => satis.musteriId === musteriId);
+            
+            if (musteriSatislari.length === 0) {
+                customerSalesBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Bu müşteriye ait satış bulunamadı.</td></tr>';
+            } else {
+                musteriSatislari.forEach(satis => {
+                    const tarih = new Date(satis.tarih);
+                    const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()}`;
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${tarihStr}</td>
+                        <td>${satis.urunAdi}</td>
+                        <td>${satis.miktar}</td>
+                        <td>${satis.fiyat.toFixed(2)}</td>
+                        <td>${satis.toplam.toFixed(2)}</td>
+                        <td>${satis.borc ? 'Borç' : 'Nakit'}</td>
+                        <td>
+                            <button class="action-btn btn-return" title="İade" onclick="urunIade('${satis.id}')">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    customerSalesBody.appendChild(tr);
+                });
+            }
+            
+            document.getElementById('customerSalesModal').style.display = 'flex';
+        }
+        
+        // Müşteri arama
+        function musteriAramaYap() {
+            const aramaMetni = document.getElementById('customerSearchInput').value.toLowerCase().replace(/\s+/g, '');
+            const rows = document.querySelectorAll('#musteriTablosu tbody tr');
+            
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase().replace(/\s+/g, '');
+                if (rowText.includes(aramaMetni)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Müşteri tablosunu sırala
+        function sortCustomerTable(column) {
+            // Sıralama yönünü belirle
+            if (currentCustomerSort.column === column) {
+                currentCustomerSort.direction = currentCustomerSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentCustomerSort.column = column;
+                currentCustomerSort.direction = 'asc';
+            }
+            
+            musteriTablosuGuncelle();
+        }
+        
+        // Tabloyu sırala
+        function sortTable(column) {
+            // Sıralama yönünü belirle
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            tabloGuncelle();
+        }
+        
+        // Senkronizasyon durumunu güncelle
+        function updateSyncStatus(status, text) {
+            const indicator = document.getElementById('syncIndicator');
+            const statusText = document.getElementById('syncText');
+            
+            indicator.className = `sync-indicator ${status}`;
+            statusText.textContent = text;
+        }
+        
+        // Müşteriye satış ekle
+        function musteriyeSatisEkle(musteriId) {
+            // Müşteri panelini aç ve satış ekleme formuna odaklan
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[data-tab="stock"]').classList.add('active');
+            document.getElementById('stock-panel').style.display = 'block';
+            document.getElementById('sales-panel').style.display = 'none';
+            document.getElementById('customers-panel').style.display = 'none';
+            
+            // Müşteriyi kaydet
+            currentCustomerForSale = musteriId;
+            
+            // Kullanıcıyı bilgilendir
+            Swal.fire({
+                icon: 'info',
+                title: 'Satış Ekleme',
+                text: 'Lütfen stok listesinden bir ürün seçin ve satış yapın. Seçtiğiniz müşteri otomatik olarak eklenecektir.',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+        
+        // Satış düzenle fonksiyonu
+        function satisDuzenle(satisId) {
+            const satisIndex = satisGecmisi.findIndex(s => s.id === satisId);
+            if (satisIndex === -1) return;
+            const satis = satisGecmisi[satisIndex];
+            
+            Swal.fire({
+                title: 'Satışı Düzenle',
+                html: `
+                    <div class="form-group">
+                        <label>Ürün Adı</label>
+                        <input type="text" id="edit-urunAdi" class="form-control" value="${satis.urunAdi}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Miktar</label>
+                        <input type="number" id="edit-miktar" class="form-control" min="1" value="${satis.miktar}">
+                    </div>
+                    <div class="form-group">
+                        <label>Satış Fiyatı (₺)</label>
+                        <input type="number" id="edit-fiyat" class="form-control" min="0" step="0.01" value="${satis.fiyat}">
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <input type="text" id="edit-aciklama" class="form-control" value="${satis.aciklama || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Müşteri</label>
+                        <select id="edit-musteri" class="form-control">
+                            <option value="">Seçili değil</option>
+                            ${Object.entries(musteriler).map(([id, m]) => `<option value="${id}" ${satis.musteriId === id ? 'selected' : ''}>${m.ad}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Borçlu Satış</label>
+                        <input type="checkbox" id="edit-borc" ${satis.borc ? 'checked' : ''}>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Kaydet',
+                cancelButtonText: 'İptal',
+                preConfirm: () => {
+                    const miktar = parseInt(document.getElementById('edit-miktar').value);
+                    const fiyat = parseFloat(document.getElementById('edit-fiyat').value);
+                    const aciklama = document.getElementById('edit-aciklama').value;
+                    const musteriId = document.getElementById('edit-musteri').value || null;
+                    const borc = document.getElementById('edit-borc').checked;
+                    if (isNaN(miktar) || miktar <= 0) {
+                        Swal.showValidationMessage('Miktar 1 veya daha büyük olmalı');
+                        return false;
+                    }
+                    if (isNaN(fiyat) || fiyat < 0) {
+                        Swal.showValidationMessage('Fiyat 0 veya daha büyük olmalı');
+                        return false;
+                    }
+                    return { miktar, fiyat, aciklama, musteriId, borc };
+                }
+            }).then(result => {
+                if (result.isConfirmed && result.value) {
+                    const { miktar, fiyat, aciklama, musteriId, borc } = result.value;
+                    satisGecmisi[satisIndex].miktar = miktar;
+                    satisGecmisi[satisIndex].fiyat = fiyat;
+                    satisGecmisi[satisIndex].toplam = fiyat * miktar;
+                    satisGecmisi[satisIndex].aciklama = aciklama;
+                    satisGecmisi[satisIndex].musteriId = musteriId;
+                    satisGecmisi[satisIndex].borc = borc;
+                    saveData();
+                    satisGecmisiGuncelle();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Satış güncellendi!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            });
+        }
+        
+        // Müşteri detaylarını göster
+        function showCustomerDetails(customerId) {
+            const musteri = musteriler[customerId];
+            if (!musteri) return;
+            
+            // Müşteri satış geçmişini getir
+            const musteriSatislari = satisGecmisi.filter(s => s.musteriId === customerId);
+            let toplamBorc = 0;
+            let toplamNakit = 0;
+            
+            musteriSatislari.forEach(satis => {
+                if (satis.borc) {
+                    toplamBorc += satis.toplam;
+                } else {
+                    toplamNakit += satis.toplam;
+                }
+            });
+            
+            // Müşteri detaylarını oluştur
+            const detailsContent = `
+                <h3>${musteri.ad}</h3>
+                <p><strong>Telefon:</strong> ${musteri.telefon || '-'}</p>
+                <p><strong>Adres:</strong> ${musteri.adres || '-'}</p>
+                <p><strong>Açıklama:</strong> ${musteri.aciklama || '-'}</p>
+                <p><strong>Toplam Nakit Satış:</strong> ${toplamNakit.toFixed(2)} ₺</p>
+                <p><strong>Toplam Borç:</strong> ${toplamBorc.toFixed(2)} ₺</p>
+                
+                <div class="customer-sales-list">
+                    <h4>Satış Geçmişi</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Ürün</th>
+                                <th>Miktar</th>
+                                <th>Fiyat</th>
+                                <th>Toplam</th>
+                                <th>Tür</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${musteriSatislari.map(satis => {
+                                const tarih = new Date(satis.tarih);
+                                const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()}`;
+                                return `
+                                    <tr>
+                                        <td>${tarihStr}</td>
+                                        <td>${satis.urunAdi}</td>
+                                        <td>${satis.miktar}</td>
+                                        <td>${satis.fiyat.toFixed(2)}</td>
+                                        <td>${satis.toplam.toFixed(2)}</td>
+                                        <td>${satis.borc ? 'Borç' : 'Nakit'}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="generateCustomerPDF('${customerId}')">
+                        <i class="fas fa-file-pdf"></i> PDF Oluştur
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('customerDetailsContent').innerHTML = detailsContent;
+            document.getElementById('customerDetailsModal').style.display = 'flex';
+        }
+        
+        // Müşteri için PDF oluştur
+        function generateCustomerPDF(customerId) {
+            const musteri = musteriler[customerId];
+            if (!musteri) return;
+            
+            // Müşteri satış geçmişini getir
+            const musteriSatislari = satisGecmisi.filter(s => s.musteriId === customerId);
+            
+            // jsPDF kullanarak PDF oluştur
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Başlık
+            doc.setFontSize(18);
+            doc.text(`${musteri.ad} Müşteri Raporu`, 105, 15, null, null, 'center');
+            
+            // Müşteri bilgileri
+            doc.setFontSize(12);
+            doc.text(`Telefon: ${musteri.telefon || '-'}`, 15, 25);
+            doc.text(`Adres: ${musteri.adres || '-'}`, 15, 32);
+            
+            // Satış tablosu başlığı
+            doc.setFontSize(14);
+            doc.text('Satış Geçmişi', 15, 45);
+            
+            // Tablo başlıkları
+            const headers = [['Tarih', 'Ürün', 'Miktar', 'Fiyat', 'Toplam', 'Tür']];
+            
+            // Tablo verileri
+            const data = musteriSatislari.map(satis => {
+                const tarih = new Date(satis.tarih);
+                const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()}`;
+                return [
+                    tarihStr,
+                    satis.urunAdi,
+                    satis.miktar,
+                    `${satis.fiyat.toFixed(2)} ₺`,
+                    `${satis.toplam.toFixed(2)} ₺`,
+                    satis.borc ? 'Borç' : 'Nakit'
+                ];
+            });
+            
+            // Tabloyu ekle
+            doc.autoTable({
+                startY: 50,
+                head: headers,
+                body: data,
+                theme: 'grid',
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [44, 111, 187] }
+            });
+            
+            // Toplamları ekle
+            const toplamNakit = musteriSatislari.filter(s => !s.borc).reduce((sum, s) => sum + s.toplam, 0);
+            const toplamBorc = musteriSatislari.filter(s => s.borc).reduce((sum, s) => sum + s.toplam, 0);
+            const toplamGenel = toplamNakit + toplamBorc;
+            
+            const lastY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(12);
+            doc.text(`Toplam Nakit: ${toplamNakit.toFixed(2)} ₺`, 15, lastY);
+            doc.text(`Toplam Borç: ${toplamBorc.toFixed(2)} ₺`, 15, lastY + 7);
+            doc.text(`Genel Toplam: ${toplamGenel.toFixed(2)} ₺`, 15, lastY + 14);
+            
+            // PDF'i indir
+            doc.save(`${musteri.ad}_Satis_Raporu.pdf`);
+        }
+        
+        // Atilgan'da ara
+        function searchAtilgan() {
+            const barkod = document.getElementById('barkod').value.trim();
+            if (!barkod) {
+                Swal.fire('Uyarı', 'Lütfen bir barkod girin!', 'warning');
+                return;
+            }
+            window.open(`https://www.atilgan.online/View/UrunListe?search=${barkod}`, '_blank');
+        }
+        
+        // Prensoto'da ara
+        function searchPrensoto() {
+            const barkod = document.getElementById('barkod').value.trim();
+            if (!barkod) {
+                Swal.fire('Uyarı', 'Lütfen bir barkod girin!', 'warning');
+                return;
+            }
+            window.open(`https://b2b.prensoto.com/Search.aspx?ctl00$MainContent$txtSearch=${barkod}`, '_blank');
+        }
+        
+        // Tarihe göre filtrele
+        function filterByDate() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            
+            if (!startDateInput || !endDateInput) {
+                Swal.fire('Uyarı', 'Lütfen başlangıç ve bitiş tarihlerini seçin!', 'warning');
+                return;
+            }
+            
+            const startDate = new Date(startDateInput);
+            const endDate = new Date(endDateInput);
+            endDate.setDate(endDate.getDate() + 1); // Bitiş tarihini dahil etmek için
+            
+            const filteredSales = satisGecmisi.filter(satis => {
+                const saleDate = new Date(satis.tarih);
+                return saleDate >= startDate && saleDate <= endDate;
+            });
+            
+            const salesBody = document.getElementById('salesBody');
+            salesBody.innerHTML = '';
+            
+            if (filteredSales && filteredSales.length > 0) {
+                filteredSales.forEach(satis => {
+                    const tr = document.createElement('tr');
+                    const tarih = new Date(satis.tarih);
+                    const tarihStr = `${tarih.getDate().toString().padStart(2, '0')}.${(tarih.getMonth()+1).toString().padStart(2, '0')}.${tarih.getFullYear()} ${tarih.getHours().toString().padStart(2, '0')}:${tarih.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    // Müşteri adını bul
+                    let musteriAdi = '-';
+                    if (satis.musteriId && musteriler[satis.musteriId]) {
+                        musteriAdi = musteriler[satis.musteriId].ad;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td>${tarihStr}</td>
+                        <td>${satis.barkod}</td>
+                        <td>${satis.urunAdi}</td>
+                        <td>${satis.miktar}</td>
+                        <td>${satis.alisFiyati ? satis.alisFiyati.toFixed(2) : '-'}</td>
+                        <td>${satis.fiyat.toFixed(2)}</td>
+                        <td>${satis.borc ? '<span class="credit-indicator">Borç</span>' : 'Nakit'}</td>
+                        <td>${musteriAdi}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn btn-return" title="İade" onclick="urunIade('${satis.id}')">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="action-btn btn-edit" title="Düzenle" onclick="satisDuzenle('${satis.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn btn-delete" title="Sil" onclick="satisSil('${satis.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    salesBody.appendChild(tr);
+                });
+            } else {
+                salesBody.innerHTML = '<tr><td colspan="9" style="text-align: center;">Bu tarih aralığında satış bulunamadı.</td></tr>';
+            }
+            
+            updateSalesSummary(filteredSales);
+        }
+    </script>
+</body>
+</html>
