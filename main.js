@@ -8,19 +8,19 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
     }
   });
 
-  // Sunucu çalışınca tarayıcı penceresi localhost'a yönlendirilecek
+  // try.html localhost:3000'de açılacak
   win.loadURL('http://localhost:3000');
 }
 
 app.whenReady().then(() => {
-  // Node.js sunucusunu başlat
+  // Node sunucuyu başlat
   exec('node server.js', (error, stdout, stderr) => {
     if (error) {
-      console.error(`Server başlatılamadı: ${error}`);
+      console.error(`Sunucu başlatılamadı: ${error}`);
       return;
     }
     console.log(stdout);
