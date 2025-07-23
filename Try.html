@@ -4170,6 +4170,20 @@
         function openBackupModal() {
             document.getElementById('backupModal').style.display = 'flex';
         }
+
+        // Müşteri düzenle işlevi (eksik olanı ekliyorum)
+        function musteriDuzenle(id) {
+            if (!musteriler[id]) return;
+            editingMode = true;
+            editingMusteriId = id;
+            const musteri = musteriler[id];
+            document.getElementById('musteriAdi').value = musteri.ad || '';
+            document.getElementById('musteriTelefon').value = musteri.telefon || '';
+            document.getElementById('musteriAdres').value = musteri.adres || '';
+            document.getElementById('musteriAciklama').value = musteri.aciklama || '';
+            document.getElementById('musteriKaydetBtn').innerHTML = '<i class="fas fa-save"></i> Güncelle';
+            document.getElementById('musteriIptalBtn').style.display = 'inline-block';
+        }
     </script>
     
     <!-- Veri Yedekleme Butonu -->
