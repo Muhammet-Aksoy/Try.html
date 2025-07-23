@@ -1778,16 +1778,16 @@
 
     <script>
         // Stok listesi objesi - localStorage destekli
-        let stokListesi = JSON.parse(localStorage.getItem('stokListesi')) || {};
+        let stokListesi = {};
         
         // Satış geçmişi
-        let satisGecmisi = JSON.parse(localStorage.getItem('satisGecmisi')) || [];
+        let satisGecmisi = [];
         
         // Müşteriler
-        let musteriler = JSON.parse(localStorage.getItem('musteriler')) || {};
+        let musteriler = {};
         
         // Borçlarım
-        let borclarim = JSON.parse(localStorage.getItem('borclarim')) || {};
+        let borclarim = {};
         
         // Görünüm ayarları
         let currentView = 'table';
@@ -1915,34 +1915,8 @@
             });
         };
         
-        // Verileri localStorage'dan yükle
+        // Verileri API'den yükle
         async function loadData() {
-            // Önce localStorage'daki verileri backend'e gönder (bir defa)
-            const storedStok = localStorage.getItem('stokListesi');
-            const storedSatis = localStorage.getItem('satisGecmisi');
-            const storedMusteriler = localStorage.getItem('musteriler');
-            const storedBorclar = localStorage.getItem('borclarim');
-            let localDataSent = localStorage.getItem('localDataSent');
-
-            if (!localDataSent && (storedStok || storedSatis || storedMusteriler)) {
-                // Sadece bir defa gönder
-                try {
-                    await fetch('/api/tum-veriler', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            stokListesi: storedStok ? JSON.parse(storedStok) : {},
-                            satisGecmisi: storedSatis ? JSON.parse(storedSatis) : [],
-                            musteriler: storedMusteriler ? JSON.parse(storedMusteriler) : {},
-                        })
-                    });
-                    localStorage.setItem('localDataSent', '1');
-                } catch (e) {
-                    console.error('Local veriler backend\'e gönderilemedi:', e);
-                }
-            }
-
-            // Sonra backend'den veri çek
             try {
                 const res = await fetch('/api/tum-veriler');
                 const result = await res.json();
@@ -1950,31 +1924,15 @@
                     stokListesi = result.data.stokListesi || {};
                     satisGecmisi = result.data.satisGecmisi || [];
                     musteriler = result.data.musteriler || {};
-                    // localStorage'ı güncelle
-                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-                    localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
-                    localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                    borclarim = result.data.borclarim || {};
                 }
             } catch (e) {
                 console.error('Backend\'den veri alınamadı:', e);
             }
-
-            // Borçlar localde kalıyor (isteğe bağlı backend'e eklenebilir)
-            if (storedBorclar) {
-                try {
-                    borclarim = JSON.parse(storedBorclar);
-                } catch (e) {
-                    borclarim = {};
-                }
-            }
         }
         
-        // Verileri localStorage'a kaydet
+        // Verileri API'ye kaydet
         async function saveData() {
-            localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-            localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
-            localStorage.setItem('musteriler', JSON.stringify(musteriler));
-            localStorage.setItem('borclarim', JSON.stringify(borclarim));
             try {
                 await fetch('/api/tum-veriler', {
                     method: 'POST',
