@@ -1916,66 +1916,78 @@
         };
         
         // Verileri localStorage'dan yükle
-        function loadData() {
+        async function loadData() {
+            // Önce localStorage'daki verileri backend'e gönder (bir defa)
             const storedStok = localStorage.getItem('stokListesi');
-            if (storedStok) {
-                try {
-                    stokListesi = JSON.parse(storedStok);
-                    
-                    // Eski veri yapısını yeni yapıya dönüştür
-                    if (Array.isArray(stokListesi)) {
-                        const newStokListesi = {};
-                        stokListesi.forEach(urun => {
-                            if (urun.barkod) {
-                                newStokListesi[urun.barkod] = urun;
-                            }
-                        });
-                        stokListesi = newStokListesi;
-                        localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
-                    }
-                } catch (e) {
-                    console.error("Stok verisi yüklenirken hata:", e);
-                    stokListesi = {};
-                }
-            }
-            
             const storedSatis = localStorage.getItem('satisGecmisi');
-            if (storedSatis) {
-                try {
-                    satisGecmisi = JSON.parse(storedSatis);
-                } catch (e) {
-                    console.error("Satış geçmişi yüklenirken hata:", e);
-                    satisGecmisi = [];
-                }
-            }
-            
             const storedMusteriler = localStorage.getItem('musteriler');
-            if (storedMusteriler) {
+            const storedBorclar = localStorage.getItem('borclarim');
+            let localDataSent = localStorage.getItem('localDataSent');
+
+            if (!localDataSent && (storedStok || storedSatis || storedMusteriler)) {
+                // Sadece bir defa gönder
                 try {
-                    musteriler = JSON.parse(storedMusteriler);
+                    await fetch('/api/tum-veriler', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            stokListesi: storedStok ? JSON.parse(storedStok) : {},
+                            satisGecmisi: storedSatis ? JSON.parse(storedSatis) : [],
+                            musteriler: storedMusteriler ? JSON.parse(storedMusteriler) : {},
+                        })
+                    });
+                    localStorage.setItem('localDataSent', '1');
                 } catch (e) {
-                    console.error("Müşteri verisi yüklenirken hata:", e);
-                    musteriler = {};
+                    console.error('Local veriler backend\'e gönderilemedi:', e);
                 }
             }
-            
-            const storedBorclar = localStorage.getItem('borclarim');
+
+            // Sonra backend'den veri çek
+            try {
+                const res = await fetch('/api/tum-veriler');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    stokListesi = result.data.stokListesi || {};
+                    satisGecmisi = result.data.satisGecmisi || [];
+                    musteriler = result.data.musteriler || {};
+                    // localStorage'ı güncelle
+                    localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
+                    localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
+                    localStorage.setItem('musteriler', JSON.stringify(musteriler));
+                }
+            } catch (e) {
+                console.error('Backend\'den veri alınamadı:', e);
+            }
+
+            // Borçlar localde kalıyor (isteğe bağlı backend'e eklenebilir)
             if (storedBorclar) {
                 try {
                     borclarim = JSON.parse(storedBorclar);
                 } catch (e) {
-                    console.error("Borç verisi yüklenirken hata:", e);
                     borclarim = {};
                 }
             }
         }
         
         // Verileri localStorage'a kaydet
-        function saveData() {
+        async function saveData() {
             localStorage.setItem('stokListesi', JSON.stringify(stokListesi));
             localStorage.setItem('satisGecmisi', JSON.stringify(satisGecmisi));
             localStorage.setItem('musteriler', JSON.stringify(musteriler));
             localStorage.setItem('borclarim', JSON.stringify(borclarim));
+            try {
+                await fetch('/api/tum-veriler', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stokListesi,
+                        satisGecmisi,
+                        musteriler
+                    })
+                });
+            } catch (e) {
+                console.error('Veriler backend\'e kaydedilemedi:', e);
+            }
             showNotification('Veriler otomatik kaydedildi', 'success');
         }
         
@@ -2451,39 +2463,33 @@
         }
         
         // Müşteri ekle
-        function musteriEkle() {
+        async function musteriEkle() {
             const ad = document.getElementById('musteriAdi').value.trim();
             const telefon = document.getElementById('musteriTelefon').value.trim();
             const adres = document.getElementById('musteriAdres').value.trim();
             const aciklama = document.getElementById('musteriAciklama').value.trim();
-            
             if (!ad) {
                 Swal.fire('Hata', 'Müşteri adı zorunludur.', 'error');
                 return;
             }
-            
             let id;
             const isEditing = editingMode && editingMusteriId;
-            
             if (isEditing) {
                 id = editingMusteriId;
             } else {
                 id = 'musteri_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
             }
-            
             musteriler[id] = {
                 ad,
                 telefon: telefon || null,
                 adres: adres || null,
                 aciklama: aciklama || null
             };
-            
-            saveData();
+            await saveData();
             musteriTablosuGuncelle();
             musteriFormTemizle();
             editingMode = false;
             editingMusteriId = null;
-            
             Swal.fire({
                 icon: 'success',
                 title: 'Başarılı',
@@ -2524,12 +2530,10 @@
         // Ürün satış fonksiyonu
         function urunSat(barkod) {
             if (!stokListesi[barkod]) return;
-            
             if (stokListesi[barkod].miktar <= 0) {
                 Swal.fire('Uyarı', 'Bu ürünün stokta yeterli miktarı yok.', 'warning');
                 return;
             }
-            
             Swal.fire({
                 title: 'Satışı onayla',
                 html: `
@@ -2543,14 +2547,6 @@
                             <label for="satisFiyati">Satış Fiyatı (₺)</label>
                             <input type="number" id="satisFiyati" class="form-control" min="0" step="0.01" placeholder="Boş bırakabilirsiniz">
                             <small style="color: #666;">Fiyat belirtmezseniz varsayılan fiyat kullanılır</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="nakitMiktari">Nakit Satış Miktarı</label>
-                            <input type="number" id="nakitMiktari" class="form-control" min="0" max="${stokListesi[barkod].miktar}" value="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="borcMiktari">Borç Satış Miktarı</label>
-                            <input type="number" id="borcMiktari" class="form-control" min="0" max="${stokListesi[barkod].miktar}" value="0">
                         </div>
                         <div id="customer-selection" style="margin-top: 10px;">
                             <label>Müşteri Seçin</label>
@@ -2573,130 +2569,35 @@
                 cancelButtonColor: '#6c757d',
                 didOpen: () => {
                     const saleCustomer = document.getElementById('sale-customer');
-                    
-                    // Müşteri seçeneklerini doldur
                     saleCustomer.innerHTML = '<option value="">Müşteri seçin</option>';
-                    
                     for (const [id, musteri] of Object.entries(musteriler)) {
                         const option = document.createElement('option');
                         option.value = id;
                         option.textContent = musteri.ad;
                         saleCustomer.appendChild(option);
                     }
-                    
-                    // Miktar değişimlerini kontrol et
-                    document.getElementById('satisMiktari').addEventListener('change', function() {
-                        const total = parseInt(this.value) || 0;
-                        document.getElementById('nakitMiktari').max = total;
-                        document.getElementById('borcMiktari').max = total;
-                        
-                        if (parseInt(document.getElementById('nakitMiktari').value) > total) {
-                            document.getElementById('nakitMiktari').value = total;
-                        }
-                    });
-                    
-                    document.getElementById('nakitMiktari').addEventListener('change', function() {
-                        const cash = parseInt(this.value) || 0;
-                        const total = parseInt(document.getElementById('satisMiktari').value) || 0;
-                        document.getElementById('borcMiktari').value = total - cash;
-                    });
-                    
-                    document.getElementById('borcMiktari').addEventListener('change', function() {
-                        const credit = parseInt(this.value) || 0;
-                        const total = parseInt(document.getElementById('satisMiktari').value) || 0;
-                        document.getElementById('nakitMiktari').value = total - credit;
-                    });
                 }
-            }).then(result => {
+            }).then(async result => {
                 if (result.isConfirmed) {
                     const satisMiktari = parseInt(document.getElementById('satisMiktari').value) || 1;
-                    const nakitMiktari = parseInt(document.getElementById('nakitMiktari').value) || 0;
-                    const borcMiktari = parseInt(document.getElementById('borcMiktari').value) || 0;
                     let satisFiyati = parseFloat(document.getElementById('satisFiyati').value);
                     const customerId = document.getElementById('sale-customer').value || null;
-                    
-                    // Miktar kontrolü
                     if (satisMiktari <= 0) {
                         Swal.fire('Hata', 'Satış miktarı 1 veya daha büyük olmalıdır.', 'error');
                         return;
                     }
-                    
-                    if (nakitMiktari + borcMiktari !== satisMiktari) {
-                        Swal.fire('Hata', 'Nakit ve borç miktarlarının toplamı satış miktarına eşit olmalıdır.', 'error');
-                        return;
-                    }
-                    
-                    // Fiyat belirtilmemişse varsayılan fiyat kullan
                     if (isNaN(satisFiyati) || satisFiyati <= 0) {
                         satisFiyati = stokListesi[barkod].alisFiyati || 0;
                     }
-                    
-                    // Nakit satış yap
-                    if (nakitMiktari > 0) {
-                        tamamlaSatis(barkod, nakitMiktari, customerId, null, satisFiyati, false);
-                    }
-                    
-                    // Borç satış yap
-                    if (borcMiktari > 0) {
-                        if (!customerId) {
-                            Swal.fire('Hata', 'Borç satış için müşteri seçmelisiniz.', 'error');
-                            return;
-                        }
-                        tamamlaSatis(barkod, borcMiktari, customerId, null, satisFiyati, true);
-                    }
+                    await tamamlaSatis(barkod, satisMiktari, customerId, null, satisFiyati);
                 }
             });
         }
         
-        // Satışta yeni müşteri ekleme modalını aç
-        function openNewCustomerModal(customerSelectId) {
-            // Müşteri formunu temizle
-            musteriFormTemizle();
-            
-            // Müşteri ekleme panelini aç
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelector('[data-tab="customers"]').classList.add('active');
-            document.getElementById('stock-panel').style.display = 'none';
-            document.getElementById('sales-panel').style.display = 'none';
-            document.getElementById('customers-panel').style.display = 'block';
-            
-            // Kaydet butonuna özel işlev ekle
-            const originalSave = musteriEkle;
-            musteriEkle = function() {
-                originalSave.call(this);
-                
-                // Kaydetme işleminden sonra satış modalına dön
-                setTimeout(() => {
-                    // Müşteri listesini güncelle
-                    const saleCustomer = document.getElementById(customerSelectId);
-                    saleCustomer.innerHTML = '<option value="">Müşteri seçin</option>';
-                    
-                    for (const [id, musteri] of Object.entries(musteriler)) {
-                        const option = document.createElement('option');
-                        option.value = id;
-                        option.textContent = musteri.ad;
-                        saleCustomer.appendChild(option);
-                    }
-                    
-                    // Satış panelini tekrar aç
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelector('[data-tab="sales"]').classList.add('active');
-                    document.getElementById('stock-panel').style.display = 'none';
-                    document.getElementById('customers-panel').style.display = 'none';
-                    document.getElementById('sales-panel').style.display = 'block';
-                    
-                    // Müşteri ekleme fonksiyonunu eski haline getir
-                    musteriEkle = originalSave;
-                }, 500);
-            };
-        }
-        
         // Satışı tamamla
-        function tamamlaSatis(barkod, miktar, musteriId, aciklama, satisFiyati, isCredit = false) {
+        async function tamamlaSatis(barkod, miktar, musteriId, aciklama, satisFiyati) {
             const urun = stokListesi[barkod];
             urun.miktar -= miktar;
-            
-            // Satış geçmişine ekle
             const satis = {
                 id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
                 tarih: new Date().toISOString(),
@@ -2707,28 +2608,61 @@
                 fiyat: satisFiyati,
                 alisFiyati: urun.alisFiyati || 0,
                 toplam: satisFiyati * miktar,
-                borc: isCredit,
+                borc: false,
                 musteriId: musteriId,
                 aciklama: aciklama
             };
-            
             satisGecmisi.push(satis);
-            saveData();
-            
+            await saveData();
             if (urun.miktar === 0) {
                 Swal.fire('Bilgi', 'Bu ürünün stoğu tükendi.', 'info');
             }
-            
             tabloGuncelle();
             satisGecmisiGuncelle();
-            
             Swal.fire({
                 icon: 'success',
                 title: 'Satış Tamamlandı!',
-                text: `Ürün ${isCredit ? 'borç' : 'nakit'} olarak satıldı.`,
+                text: `Ürün satıldı.`,
                 showConfirmButton: false,
                 timer: 1500
             });
+        }
+        
+        // Satışta yeni müşteri ekleme modalını aç
+        function openNewCustomerModal(customerSelectId) {
+            // Müşteri formunu temizle
+            musteriFormTemizle();
+            // Müşteri ekleme panelini aç
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-tab="customers"]').classList.add('active');
+            document.getElementById('stock-panel').style.display = 'none';
+            document.getElementById('sales-panel').style.display = 'none';
+            document.getElementById('customers-panel').style.display = 'block';
+            // Kaydet butonuna özel işlev ekle
+            const originalSave = musteriEkle;
+            musteriEkle = async function() {
+                await originalSave.call(this);
+                // Kaydetme işleminden sonra satış modalına dön
+                setTimeout(() => {
+                    // Müşteri listesini güncelle
+                    const saleCustomer = document.getElementById(customerSelectId);
+                    saleCustomer.innerHTML = '<option value="">Müşteri seçin</option>';
+                    for (const [id, musteri] of Object.entries(musteriler)) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = musteri.ad;
+                        saleCustomer.appendChild(option);
+                    }
+                    // Satış panelini tekrar aç
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelector('[data-tab="sales"]').classList.add('active');
+                    document.getElementById('stock-panel').style.display = 'none';
+                    document.getElementById('customers-panel').style.display = 'none';
+                    document.getElementById('sales-panel').style.display = 'block';
+                    // Müşteri ekleme fonksiyonunu eski haline getir
+                    musteriEkle = originalSave;
+                }, 500);
+            };
         }
         
         // Ürün iade
