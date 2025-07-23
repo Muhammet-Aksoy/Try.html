@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs-extra');
 const path = require('path');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = 3000;
@@ -177,6 +179,39 @@ app.use((req, res) => {
         success: false,
         message: 'Endpoint bulunamadı'
     });
+});
+
+// Yedek dosyasını mail ile gönder
+async function sendBackupMail() {
+    try {
+        const backupData = await fs.readFile(allDataFile);
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'yedek@example.com', // GÖNDEREN MAIL
+                pass: 'uygunuygulamasifresi' // Uygulama şifresi veya app password
+            }
+        });
+        await transporter.sendMail({
+            from: 'yedek@example.com',
+            to: 'yedek@example.com', // ALICI MAIL
+            subject: `Günlük Yedek - ${new Date().toLocaleDateString('tr-TR')}`,
+            text: 'Günlük otomatik yedek dosyası ektedir.',
+            attachments: [
+                {
+                    filename: `tumVeriler_${new Date().toISOString().split('T')[0]}.json`,
+                    content: backupData
+                }
+            ]
+        });
+        console.log('Yedek maili gönderildi.');
+    } catch (err) {
+        console.error('Yedek maili gönderilemedi:', err);
+    }
+}
+// Her gün gece 23:59'da yedek maili gönder
+cron.schedule('59 23 * * *', () => {
+    sendBackupMail();
 });
 
 // Sunucuyu başlat
