@@ -21,8 +21,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // Tablo oluşturma
 function initializeDatabase() {
     db.serialize(() => {
+        db.run('DROP TABLE IF EXISTS stok');
         db.run(`CREATE TABLE IF NOT EXISTS stok (
-            barkod TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barkod TEXT,
             ad TEXT,
             miktar INTEGER,
             alisFiyati REAL,
