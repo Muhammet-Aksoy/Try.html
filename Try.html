@@ -1917,6 +1917,21 @@
         
         // Verileri API'den yükle
         async function loadData() {
+            // Önce localStorage'dan oku
+            const local = localStorage.getItem('saban_data');
+            if (local) {
+                try {
+                    const result = JSON.parse(local);
+                    stokListesi = result.stokListesi || {};
+                    satisGecmisi = result.satisGecmisi || [];
+                    musteriler = result.musteriler || {};
+                    borclarim = result.borclarim || {};
+                    return;
+                } catch (e) {
+                    console.error('LocalStorage verisi okunamadı:', e);
+                }
+            }
+            // Sonra backend'den dene
             try {
                 const res = await fetch('/api/tum-veriler');
                 const result = await res.json();
@@ -1933,6 +1948,14 @@
         
         // Verileri API'ye kaydet
         async function saveData() {
+            // Önce localStorage'a kaydet
+            localStorage.setItem('saban_data', JSON.stringify({
+                stokListesi,
+                satisGecmisi,
+                musteriler,
+                borclarim
+            }));
+            // Sonra backend'e kaydet
             try {
                 await fetch('/api/tum-veriler', {
                     method: 'POST',
